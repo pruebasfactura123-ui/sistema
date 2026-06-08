@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Generar Nueva Factura</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { 
+            --navy: #0f172a; 
+            --bg: #e2e8f0; 
+            --accent: #1e40af;
+            --invoice-border: #b8c2cc;
+            --paper-bg: #f8fafc;
+        }
+        body { background: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; min-height: 100vh; margin: 0; font-size: 0.78rem; color: #1e293b; }
+        .sidebar { width: 220px; background: #0f172a; color: #ffffff; padding: 20px; position: fixed; height: 100vh; display: flex; flex-direction: column; z-index: 100; }
+        .sidebar h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .nav-link { color: #94a3b8; padding: 8px 12px; border-radius: 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.08); color: #ffffff; font-weight: 600; }
+        .main-content { margin-left: 220px; width: calc(100% - 220px); padding: 25px; }
+        .invoice-paper { background: #ffffff; border: 1px solid #b8c2cc; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); padding: 35px; max-width: 1050px; margin: 0 auto; }
+        .invoice-block-box { border: 1px solid #b8c2cc; border-radius: 5px; padding: 12px; background: #fdfdfd; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02); }
+        .invoice-title-badge { background: #111827; color: #ffffff; padding: 5px 10px; font-weight: 800; text-align: center; border-radius: 4px; font-size: 0.85rem; letter-spacing: 0.5px; }
+        .section-title { background: #edf2f7; color: #1e293b; font-weight: 700; padding: 5px 10px; font-size: 0.72rem; border-left: 3px solid #0f172a; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .form-label { font-weight: 700; color: #334155; font-size: 0.68rem; margin-bottom: 2px; text-transform: uppercase; }
+        .form-control, .form-select { font-size: 0.78rem; border-radius: 4px; padding: 4px 8px; border: 1px solid #cbd5e1; background-color: #ffffff; }
+        .table-invoice { border: 1px solid #b8c2cc; margin-top: 10px; }
+        .table-invoice thead th { background: #0f172a; color: #ffffff; font-size: 0.7rem; font-weight: 600; padding: 6px 8px; text-transform: uppercase; border: 1px solid #1e293b; }
+        .table-invoice tbody td { padding: 6px 8px; border: 1px solid #e2e8f0; font-size: 0.75rem; }
+        .totals-box { border: 1px solid #b8c2cc; border-radius: 5px; padding: 12px; background: #f8fafc; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h4 th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</h4>
+        <nav class="nav flex-column flex-grow-1">
+            <a th:href="@{/}" class="nav-link"><i class="fas fa-chart-pie"></i> Inicio</a>
+            <p class="text-uppercase fw-bold mb-1 mt-3" style="font-size: 0.6rem; color: #64748b; padding-left: 12px;">Operaciones</p>
+            <a th:href="@{/facturas/nueva}" class="nav-link active"><i class="fas fa-file-invoice-dollar"></i> Crear Factura</a>
+            <a th:href="@{/facturas/historial}" class="nav-link"><i class="fas fa-history"></i> Historial Facturas</a>
+            
+            <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')">
+                <p class="text-uppercase fw-bold mb-1 mt-3" style="font-size: 0.6rem; color: #64748b; padding-left: 12px;">Administración</p>
+                <a th:href="@{/usuarios}" class="nav-link"><i class="fas fa-users"></i> Trabajadores</a>
+            </div>
+        </nav>
+        <div class="mt-auto border-top pt-2 border-secondary">
+            <a th:href="@{/perfil}" class="nav-link mb-1"><i class="fas fa-user-circle"></i> Mi Perfil</a>
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 w-100 text-start ps-2" style="font-size: 0.75rem;">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="invoice-paper">
+            <div class="row g-3 mb-4 align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="bg-light p-3 border rounded text-center" style="min-width: 65px; height: 65px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-building fa-2x text-dark"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold m-0 text-dark" style="font-size: 1.05rem;" th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</h5>
+                            <p class="m-0 text-secondary" style="font-size: 0.72rem; font-weight: 500;">General de Ley Personas Morales (601)</p>
+                            <p class="m-0 text-muted" style="font-size: 0.7rem;">Lugar de Emisión: 06470, Ciudad de México, México</p>
+                            <p class="m-0 fw-bold text-dark" style="font-size: 0.7rem;">RFC EMISOR: <span class="text-primary" th:text="${empresaRfc ?: 'XIA190128J61'}">XIA190128J61</span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="invoice-block-box text-end">
+                        <div class="invoice-title-badge mb-2">COMPROBANTE FISCAL DIGITAL (CFDI)</div>
+                        <p class="m-0 fw-bold" style="font-size: 0.75rem;">EFECTO DE COMPROBANTE: <span class="text-success">INGRESO</span></p>
+                        <p class="text-muted m-0" style="font-size: 0.68rem;">FECHA DE EMISIÓN: <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}">29/05/2026 11:06</span></p>
+                        <p class="text-muted m-0" style="font-size: 0.63rem; font-family: monospace;">ENTORNO: <span class="text-warning fw-bold">SANDBOX (PRUEBAS SAT)</span></p>
+                        <p class="text-muted m-0" style="font-size: 0.63rem; font-family: monospace;">PAC CERTIFICADOR: <span class="text-dark">Facturapi S.A. de C.V.</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="invoice-block-box h-100">
+                        <div class="section-title"><i class="fas fa-user-tie me-2"></i>Datos del Receptor</div>
+                        <div class="mb-2">
+                            <label class="form-label">Seleccionar Cliente (Razón Social)</label>
+                            <select class="form-select" id="clienteSelect">
+                                <option value="" disabled>-- Seleccione el contribuyente receptor --</option>
+                                <option value="ESCUELA DE KITERS UNIDOS" data-rfc="EKU9003173C9" selected>ESCUELA DE KITERS UNIDOS (EKU9003173C9)</option>
+                                <option th:each="c : ${clientes}" 
+                                        th:value="${c.nombre}" 
+                                        th:data-rfc="${c.rfc}"
+                                        th:text="${c.nombre} + ' (' + ${c.rfc} + ')'"></option>
+                            </select>
+                        </div>
+                        <p class="text-muted m-0" style="font-size: 0.68rem; font-style: italic;">Uso de CFDI predeterminado: G03 - Gastos en general.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="invoice-block-box h-100">
+                        <div class="section-title"><i class="fas fa-hand-holding-usd me-2"></i>Condiciones de Pago</div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label">Método de Pago</label>
+                                <select class="form-select" id="metodoPagoSelect">
+                                    <option value="PUE">PUE - Pago en una sola exhibición</option>
+                                    <option value="PPD">PPD - Pago en parcialidades o diferido</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Forma de Pago</label>
+                                <select class="form-select" id="formaPagoSelect">
+                                    <option value="03">03 - Transferencia electrónica (SPEI)</option>
+                                    <option value="01">01 - Efectivo</option>
+                                    <option value="02">02 - Cheque nominativo</option>
+                                    <option value="99">99 - Por definir</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 mb-3" style="background: #f1f5f9; border: 1px dashed #b8c2cc; border-radius: 4px;">
+                <div class="fw-bold text-dark mb-2" style="font-size: 0.72rem;"><i class="fas fa-plus-circle text-primary me-1"></i> AGREGAR PARTIDA DE FACTURA (DETALLE FISCAL)</div>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label">Descripción del Concepto / Servicio</label>
+                        <input type="text" class="form-control" id="inputDescripcion" placeholder="Ej: Desarrollo de software">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" class="form-control text-center" id="inputCantidad" value="1" min="1">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Valor Unitario ($)</label>
+                        <input type="number" class="form-control text-end" id="inputPrecio" value="100.00" step="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-dark w-100 fw-bold btn-sm" id="btnAnadir" style="padding: 5px;"><i class="fas fa-plus me-1"></i>Añadir</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-invoice align-middle mb-4 text-nowrap">
+                    <thead>
+                        <tr class="text-center">
+                            <th style="width: 10%;">Clave SAT</th>
+                            <th style="width: 10%;">Clave Int.</th>
+                            <th style="text-align: left; width: 35%;">Descripción del Concepto o Servicio</th>
+                            <th style="width: 10%;">Unidad</th>
+                            <th style="width: 5%;">Cant.</th>
+                            <th style="width: 10%;">Valor U. ($)</th>
+                            <th style="width: 10%;">Importe ($)</th>
+                            <th style="width: 5%;">Impuesto</th>
+                            <th style="width: 5%;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaBody">
+                        <tr id="filaVacia">
+                            <td colspan="9" class="text-center text-muted py-4" style="font-style: italic; background: #ffffff;">Ningún concepto añadido a la factura. Use el recuadro superior para agregar partidas.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="row g-3 align-items-center mt-2">
+                <div class="col-md-7">
+                    <div class="d-flex align-items-start gap-2 border p-2 rounded bg-light" style="font-size: 0.65rem;">
+                        <div class="text-center bg-white p-1 border">
+                            <i class="fas fa-qrcode fa-4x text-dark"></i>
+                        </div>
+                        <div>
+                            <p class="m-0 fw-bold text-dark">Código QR SAT | Certificación Certificada</p>
+                            <p class="text-muted m-0">
+                                * Este documento es una representación visual para la generación de un CFDI a través del PAC autorizado Facturapi.<br>
+                                * Al dar clic en "Sellar y Descargar CFDI", los sellos digitales serán estampados y validados por el SAT.
+                            </p>
+                            <div class="mt-1 font-monospace text-muted" style="font-size: 0.58rem;">Sello Digital Sandbox: Activo y listo.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="totals-box">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted fw-bold">SUBTOTAL:</span>
+                            <span class="fw-bold text-dark" id="spanSubtotal">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted fw-bold">(-) DESCUENTOS:</span>
+                            <span class="text-muted fw-bold">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted fw-bold">IVA TRASLADADO (16%):</span>
+                            <span class="fw-bold text-dark" id="spanIva">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted fw-bold">IVA RETENIDO:</span>
+                            <span class="text-muted fw-bold">$0.00</span>
+                        </div>
+                        <hr class="my-1">
+                        <div class="d-flex justify-content-between fw-bold text-dark" style="font-size: 0.95rem;">
+                            <span>TOTAL NETO:</span>
+                            <span class="text-primary" id="spanTotal">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                <a th:href="@{/}" class="btn btn-outline-secondary btn-sm px-3">
+                    <i class="fas fa-arrow-left me-1"></i> Volver al Menú
+                </a>
+                <button type="button" id="btnGuardarFactura" class="btn btn-primary px-4 fw-bold btn-sm" style="background-color: #1e40af; border: none;">
+                    <i class="fas fa-gavel me-2"></i>Sellar y Descargar CFDI
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let conceptos = [];
+        const btnAnadir = document.getElementById('btnAnadir');
+        const tablaBody = document.getElementById('tablaBody');
+        const btnGuardarFactura = document.getElementById('btnGuardarFactura');
+
+        btnAnadir.addEventListener('click', () => {
+            const descripcion = document.getElementById('inputDescripcion').value.trim();
+            const cantidad = parseInt(document.getElementById('inputCantidad').value);
+            const precioUnitario = parseFloat(document.getElementById('inputPrecio').value);
+
+            if (!descripcion || cantidad <= 0 || precioUnitario <= 0) {
+                alert('Por favor, ingresa los datos de la partida correctamente.');
+                return;
+            }
+
+            const importe = cantidad * precioUnitario;
+            conceptos.push({ 
+                descripcion: descripcion, 
+                cantidad: cantidad, 
+                precioUnitario: precioUnitario, 
+                importe: importe 
+            });
+
+            actualizarTabla();
+            document.getElementById('inputDescripcion').value = '';
+            document.getElementById('inputCantidad').value = '1';
+            document.getElementById('inputPrecio').value = '100.00';
+        });
+
+        function actualizarTabla() {
+            if (conceptos.length === 0) {
+                tablaBody.innerHTML = `
+                    <tr id="filaVacia">
+                        <td colspan="9" class="text-center text-muted py-4" style="font-style: italic; background: #ffffff;">Ningún concepto añadido a la factura. Use el recuadro superior para agregar partidas.</td>
+                    </tr>
+                `;
+                document.getElementById('spanSubtotal').innerText = "$0.00";
+                document.getElementById('spanIva').innerText = "$0.00";
+                document.getElementById('spanTotal').innerText = "$0.00";
+                return;
+            }
+
+            tablaBody.innerHTML = '';
+            let subtotal = 0;
+
+            conceptos.forEach((c, index) => {
+                subtotal += c.importe;
+                const claveSat = '84111500';
+                const unidadSat = 'E48 - Serv';
+                const claveInt = 'SER-GEN';
+
+                tablaBody.innerHTML += `
+                    <tr class="text-center">
+                        <td class="font-monospace text-secondary fw-bold">${claveSat}</td>
+                        <td class="font-monospace text-muted" style="font-size:0.7rem;">${claveInt}</td>
+                        <td style="text-align: left;" class="fw-semibold text-dark">${c.descripcion}</td>
+                        <td class="text-secondary">${unidadSat}</td>
+                        <td class="fw-bold text-dark">${c.cantidad}</td>
+                        <td class="text-end font-monospace">$${c.precioUnitario.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td class="text-end font-monospace fw-bold text-dark">$${c.importe.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td class="text-muted" style="font-size:0.68rem;">IVA 16%</td>
+                        <td>
+                            <button type="button" class="btn btn-link text-danger p-0 m-0" onclick="eliminarConcepto(${index})"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const iva = subtotal * 0.16;
+            const total = subtotal + iva;
+
+            document.getElementById('spanSubtotal').innerText = `$${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('spanIva').innerText = `$${iva.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('spanTotal').innerText = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        }
+
+        window.eliminarConcepto = function(index) {
+            conceptos.splice(index, 1);
+            actualizarTabla();
+        }
+
+        btnGuardarFactura.addEventListener('click', () => {
+            const clienteSelect = document.getElementById('clienteSelect');
+            const clienteOption = clienteSelect.options[clienteSelect.selectedIndex];
+            
+            if (!clienteOption || !clienteSelect.value) {
+                alert('Selecciona un contribuyente para timbrar.');
+                return;
+            }
+
+            const rfcCliente = clienteOption.getAttribute('data-rfc');
+            const nombreCliente = clienteOption.value;
+            
+            if (conceptos.length === 0) {
+                alert('Sube al menos un concepto a las partidas fiscales.');
+                return;
+            }
+
+            const subtotal = conceptos.reduce((sum, c) => sum + c.importe, 0);
+            const iva = subtotal * 0.16;
+            const total = subtotal + iva;
+
+            const formData = new FormData();
+            formData.append('rfcCliente', rfcCliente);
+            formData.append('nombreCliente', nombreCliente);
+            formData.append('subtotal', subtotal);
+            formData.append('iva', iva);
+            formData.append('total', total);
+            formData.append('tipo', 'INGRESO'); 
+            formData.append('metodoPago', document.getElementById('metodoPagoSelect').value);
+            formData.append('formaPago', document.getElementById('formaPagoSelect').value);
+            formData.append('conceptosJson', JSON.stringify(conceptos));
+
+            btnGuardarFactura.disabled = true;
+            btnGuardarFactura.innerText = 'Generando Sello Digital...';
+
+            fetch('/facturas/guardar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success' || data.uuid) {
+                    alert('¡CFDI Certificado con éxito por el SAT!\nUUID: ' + data.uuid);
+                    
+                    // Prioridad absoluta al ID numérico local o al UUID limpio
+                    const idFactura = data.id ? data.id : data.uuid;
+                    
+                    // Lanzamos la descarga del PDF en la misma pestaña activa
+                    window.location.href = '/descargar-pdf/' + idFactura;
+                    
+                    // Espera corta y redirección automática al historial
+                    setTimeout(() => {
+                        window.location.href = '/facturas/historial';
+                    }, 1500);
+
+                } else {
+                    alert('Fallo de Timbrado: ' + (data.message || 'Error Desconocido'));
+                    btnGuardarFactura.disabled = false;
+                    btnGuardarFactura.innerHTML = '<i class="fas fa-gavel me-2"></i>Sellar y Descargar CFDI';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocurrió un inconveniente al procesar la solicitud.');
+                btnGuardarFactura.disabled = false;
+                btnGuardarFactura.innerHTML = '<i class="fas fa-gavel me-2"></i>Sellar y Descargar CFDI';
+            });
+        });
+    </script>
+</body>
+</html>
