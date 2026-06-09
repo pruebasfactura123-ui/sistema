@@ -8,10 +8,11 @@ import org.springframework.context.annotation.FilterType;
 @SpringBootApplication
 @ComponentScan(
     basePackages = "com.example.sistema",
-    excludeFilters = @ComponentScan.Filter(
-        type = FilterType.REGEX, 
-        pattern = "com\\.example\\.sistema\\.(controller|service|repository|config)\\..*"
-    )
+    excludeFilters = {
+        @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.example\\.sistema\\.controller\\..*"),
+        @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.example\\.sistema\\.service\\..*"),
+        @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.example\\.sistema\\.config\\..*")
+    }
 )
 public class SistemaApplication {
 
