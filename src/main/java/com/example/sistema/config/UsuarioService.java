@@ -3,6 +3,7 @@ package com.example.sistema.config;
 import com.example.sistema.model.Usuario;
 import com.example.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile; // <--- NUEVO IMPORT MÁGICO
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+@Profile("prod_con_db") // <--- ESTO APAGA ESTA CLASE TEMPORALMENTE EN RENDER
 public class UsuarioService implements UserDetailsService {
 
     @Autowired
