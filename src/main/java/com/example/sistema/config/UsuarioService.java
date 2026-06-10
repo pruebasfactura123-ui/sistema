@@ -10,7 +10,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
-@Service // <--- Ya NO tiene @Profile, así que Render SÍ lo va a leer siempre
+@Service
 public class UsuarioService implements UserDetailsService {
 
     @Autowired
@@ -18,7 +18,7 @@ public class UsuarioService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // PASE VIP DE EMERGENCIA: Si es 'admin', entra directo con texto plano sin tocar BD
+        // PASE VIP: Si escribes admin, entra directo sin buscar en la base de datos
         if ("admin".equalsIgnoreCase(username)) {
             return new org.springframework.security.core.userdetails.User(
                     "admin",
@@ -27,7 +27,6 @@ public class UsuarioService implements UserDetailsService {
             );
         }
 
-        // Para cualquier otro usuario, lo busca normalmente en SmarterASP
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
 
