@@ -17,7 +17,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.List;
 import java.util.Optional;
 
 @Controller
@@ -34,24 +33,27 @@ public class AsistenciaController {
         if (principal == null) {
             throw new RuntimeException("No hay ninguna sesión activa.");
         }
+        // Salvavidas para el admin en memoria
+        if ("admin".equalsIgnoreCase(principal.getName())) {
+            Usuario adminFicticio = new Usuario();
+            adminFicticio.setUsername("admin");
+            adminFicticio.setRol("JEFE");
+            return adminFicticio;
+        }
         return usuarioRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado en el sistema."));
     }
 
     // =========================================================================
-    // VER LAS ASISTENCIAS: El Jefe entra aquí para ver el historial de su personal
+    // VER ASISTENCIAS: Redirige al panel unificado de pestañas (auditoria.html)
     // =========================================================================
     @GetMapping
-    public String verAsistencias(Principal principal, Model model) {
+    public String verAsistencias(Principal principal) {
         if (principal == null) {
             return "redirect:/login";
         }
-        
-        // CORRECCIÓN: Traemos las asistencias de SmarterASP de verdad en lugar de redirigir a auditoría
-        List<Asistencia> listaAsistencias = asistenciaRepository.findAll();
-        model.addAttribute("asistencias", listaAsistencias);
-        
-        return "asistencia"; // Te manda a tu pantalla HTML de asistencias donde se pintará la tabla
+        // En lugar de buscar datos aquí, mandamos al usuario a la ruta correcta que maneja AuditoriaController
+        return "redirect:/operaciones/auditoria";
     }
 
     // =========================================================================
@@ -60,13 +62,12 @@ public class AsistenciaController {
     @PostMapping("/entrada")
     public String registrarEntrada(Principal principal, Authentication authentication, RedirectAttributes redirectAttributes, HttpServletRequest request) {
         String paginaOrigen = request.getHeader("Referer");
-        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/asistencia";
+        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/operaciones/auditoria";
 
         if (principal == null || authentication == null) {
             return "redirect:/login";
         }
 
-        // Tu lógica original intacta: Si es jefe, no hace nada en la BD
         boolean esJefe = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("JEFE") || a.getAuthority().equals("ROLE_JEFE"));
 
@@ -105,13 +106,12 @@ public class AsistenciaController {
     @PostMapping("/salida")
     public String registrarSalida(Principal principal, Authentication authentication, RedirectAttributes redirectAttributes, HttpServletRequest request) {
         String paginaOrigen = request.getHeader("Referer");
-        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/asistencia";
+        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/operaciones/auditoria";
 
         if (principal == null || authentication == null) {
             return "redirect:/login";
         }
 
-        // Tu lógica original intacta: Si es jefe, no hace nada en la BD
         boolean esJefe = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("JEFE") || a.getAuthority().equals("ROLE_JEFE"));
 
