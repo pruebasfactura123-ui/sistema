@@ -12,7 +12,8 @@ public class Asistencia {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // CAMBIO CRÍTICO: Cambiamos LAZY por EAGER para que Thymeleaf pueda pintar el nombre del usuario sin romperse
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "usuario_id", referencedColumnName = "id", nullable = false)
     private Usuario usuario; 
 
@@ -27,7 +28,9 @@ public class Asistencia {
 
     public Asistencia() {}
 
-    // Getters y Setters
+    // ==========================================
+    // GETTERS Y SETTERS (Se quedan exactamente igual)
+    // ==========================================
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
