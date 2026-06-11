@@ -7,7 +7,6 @@ import com.example.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,7 +32,7 @@ public class AsistenciaController {
         if (principal == null) {
             throw new RuntimeException("No hay ninguna sesión activa.");
         }
-        // Salvavidas para el admin en memoria
+        // Salvavidas para el admin en memoria que no está en la BD
         if ("admin".equalsIgnoreCase(principal.getName())) {
             Usuario adminFicticio = new Usuario();
             adminFicticio.setUsername("admin");
@@ -52,7 +51,6 @@ public class AsistenciaController {
         if (principal == null) {
             return "redirect:/login";
         }
-        // En lugar de buscar datos aquí, mandamos al usuario a la ruta correcta que maneja AuditoriaController
         return "redirect:/operaciones/auditoria";
     }
 

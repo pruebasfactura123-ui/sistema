@@ -54,11 +54,11 @@ public class AuditoriaController {
             String rol = logueado.getRol() != null ? logueado.getRol().toUpperCase() : "";
             if ("JEFE".equals(rol) || "GERENTE".equals(rol)) {
                 
+                // 1. Cargar movimientos del sistema
                 List<Auditoria> logsFiscales = auditoriaRepository.findAllByOrderByFechaRegistroDesc();
                 model.addAttribute("auditorias", logsFiscales);
 
-                // CORRECCIÓN DEL FILTRO: Si es el admin de pruebas (sin empresa), muestra todo. 
-                // Si es un usuario real, filtra estrictamente por su empresa asignada.
+                // 2. Cargar asistencias (Con bypass inteligente para el admin de pruebas)
                 List<Asistencia> listaAsistencias;
                 if ("admin".equals(logueado.getUsername()) || logueado.getEmpresa() == null) {
                     listaAsistencias = asistenciaRepository.findAll();
@@ -69,9 +69,10 @@ public class AuditoriaController {
                             .filter(a -> a.getUsuario().getEmpresa().getId().equals(empresaId))
                             .collect(Collectors.toList());
                 }
-                
                 model.addAttribute("asistencias", listaAsistencias);
+                
             } else {
+                // Listas vacías si es un empleado común por seguridad
                 model.addAttribute("auditorias", new ArrayList<>());
                 model.addAttribute("asistencias", new ArrayList<>());
             }
