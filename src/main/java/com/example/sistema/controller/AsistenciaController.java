@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 @Controller
@@ -37,23 +38,35 @@ public class AsistenciaController {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado en el sistema."));
     }
 
+    // =========================================================================
+    // VER LAS ASISTENCIAS: El Jefe entra aquí para ver el historial de su personal
+    // =========================================================================
     @GetMapping
     public String verAsistencias(Principal principal, Model model) {
-        return "redirect:/operaciones/auditoria"; 
+        if (principal == null) {
+            return "redirect:/login";
+        }
+        
+        // CORRECCIÓN: Traemos las asistencias de SmarterASP de verdad en lugar de redirigir a auditoría
+        List<Asistencia> listaAsistencias = asistenciaRepository.findAll();
+        model.addAttribute("asistencias", listaAsistencias);
+        
+        return "asistencia"; // Te manda a tu pantalla HTML de asistencias donde se pintará la tabla
     }
 
     // =========================================================================
-    // REGISTRO DE ENTRADA (REGRESA A LA PÁGINA DE ORIGEN)
+    // REGISTRO DE ENTRADA (Mantiene tu regla: El Jefe NO registra)
     // =========================================================================
     @PostMapping("/entrada")
     public String registrarEntrada(Principal principal, Authentication authentication, RedirectAttributes redirectAttributes, HttpServletRequest request) {
         String paginaOrigen = request.getHeader("Referer");
-        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/";
+        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/asistencia";
 
         if (principal == null || authentication == null) {
             return "redirect:/login";
         }
 
+        // Tu lógica original intacta: Si es jefe, no hace nada en la BD
         boolean esJefe = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("JEFE") || a.getAuthority().equals("ROLE_JEFE"));
 
@@ -77,7 +90,7 @@ public class AsistenciaController {
                 asistenciaRepository.save(asistencia);
                 
                 String horaFormateada = LocalTime.now().toString().substring(0, 5);
-                redirectAttributes.addFlashAttribute("exitoAsistencia", "¡Éxito! Tu entrada ha sido registrada a las " + horaFormateada + ". ¡Excelente jornada laboral!");
+                redirectAttributes.addFlashAttribute("exitoAsistencia", "¡Éxito! Tu entrada ha sido registrada a las " + horaFormateada + ".");
             }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("alertaAsistencia", "Error al guardar asistencia: " + e.getMessage());
@@ -87,17 +100,18 @@ public class AsistenciaController {
     }
 
     // =========================================================================
-    // REGISTRO DE SALIDA (REGRESA A LA PÁGINA DE ORIGEN)
+    // REGISTRO DE SALIDA (Mantiene tu regla: El Jefe NO registra)
     // =========================================================================
     @PostMapping("/salida")
     public String registrarSalida(Principal principal, Authentication authentication, RedirectAttributes redirectAttributes, HttpServletRequest request) {
         String paginaOrigen = request.getHeader("Referer");
-        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/";
+        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/asistencia";
 
         if (principal == null || authentication == null) {
             return "redirect:/login";
         }
 
+        // Tu lógica original intacta: Si es jefe, no hace nada en la BD
         boolean esJefe = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("JEFE") || a.getAuthority().equals("ROLE_JEFE"));
 
