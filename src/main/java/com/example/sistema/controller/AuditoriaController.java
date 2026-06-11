@@ -3,6 +3,7 @@ package com.example.sistema.controller;
 import com.example.sistema.model.Asistencia;
 import com.example.sistema.model.Auditoria;
 import com.example.sistema.model.Usuario;
+import com.example.sistema.model.Empresa; // Asegúrate de importar tu modelo Empresa
 import com.example.sistema.repository.AsistenciaRepository;
 import com.example.sistema.repository.AuditoriaRepository;
 import com.example.sistema.repository.UsuarioRepository;
@@ -38,6 +39,13 @@ public class AuditoriaController {
             Usuario adminFicticio = new Usuario();
             adminFicticio.setUsername("admin");
             adminFicticio.setRol("JEFE");
+            
+            // 🏢 ASIGNACIÓN DE EMPRESA SIMULADA:
+            // Le damos una empresa al admin en memoria para que no arrastre basura de otras empresas.
+            Empresa empresaSimulada = new Empresa();
+            empresaSimulada.setId(1L); // <--- CAMBIA ESTE '1' por el ID de la empresa que quieres auditar en SmarterASP
+            adminFicticio.setEmpresa(empresaSimulada);
+            
             return adminFicticio;
         }
 
@@ -58,10 +66,11 @@ public class AuditoriaController {
                 List<Auditoria> logsFiscales = auditoriaRepository.findAllByOrderByFechaRegistroDesc();
                 model.addAttribute("auditorias", logsFiscales);
 
-                // 2. Cargar asistencias (Con bypass inteligente para el admin de pruebas)
+                // 2. Cargar asistencias filtradas estrictamente
                 List<Asistencia> listaAsistencias;
-                if ("admin".equals(logueado.getUsername()) || logueado.getEmpresa() == null) {
-                    listaAsistencias = asistenciaRepository.findAll();
+                if (logueado.getEmpresa() == null) {
+                    // Si por algún motivo un usuario no tiene empresa asignada, lista vacía por seguridad
+                    listaAsistencias = new ArrayList<>();
                 } else {
                     Long empresaId = logueado.getEmpresa().getId();
                     listaAsistencias = asistenciaRepository.findAll().stream()
