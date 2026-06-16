@@ -46,16 +46,16 @@ public class NominaController {
     @GetMapping("/nominas")
     public String listarNominas(Model model) {
         List<Nomina> nominas = nominaRepository.findAllByOrderByFechaEmisionDesc();
-        List<Usuario> trabajadores = usuarioRepository.findAll(); // Cargar los empleados existentes
+        List<Usuario> trabajadores = usuarioRepository.findAll(); 
 
         model.addAttribute("nominas", nominas);
         model.addAttribute("trabajadores", trabajadores);
         model.addAttribute("empresaNombre", "OFICINA FISCAL (Nóminas)");
-        return "nominas"; // Buscará nominas.html en templates
+        return "nominas"; 
     }
 
     /**
-     * Procesa el registro o simulación de un recibo de nómina incluyendo incidencias
+     * Procesar el registro o simulación de un recibo de nómina incluyendo incidencias
      */
     @PostMapping("/nominas/guardar")
     public String guardarNomina(@RequestParam("trabajadorId") Long trabajadorId,
@@ -78,26 +78,23 @@ public class NominaController {
             nueva.setTrabajador(trabajador);
             nueva.setPeriodo(periodo);
             nueva.setSueldoBase(sueldoBase);
-            
-            // Guardar incidencias en la entidad
             nueva.setDiasTrabajados(diasTrabajados);
             nueva.setHorasExtra(horasExtra);
             nueva.setFaltas(faltas);
             nueva.setRetardos(retardos);
 
             // CÁLCULO MATEMÁTICO BASADO EN INCIDENCIAS
-            // 1. Sumamos $100 MXN por cada hora extra a las percepciones capturadas en el formulario
+            // 1. Horas extra ($100 MXN c/u) agregadas a percepciones adicionales
             Double totalPercepciones = percepciones + (horasExtra * 100.0);
             
-            // 2. Descontamos un día completo de salario por cada falta cometida
-            // Se asume un periodo quincenal (15 días) para calcular el salario diario base
+            // 2. Descuento de días por faltas (Asumiendo periodo quincenal de 15 días)
             Double sueldoDiario = sueldoBase / 15.0;
             Double totalDeducciones = deducciones + (faltas * sueldoDiario);
 
             nueva.setPercepciones(totalPercepciones);
             nueva.setDeducciones(totalDeducciones);
 
-            // CÁLCULO AUTOMÁTICO DEL SUELDO NETO TOTAL
+            // 3. Cálculo del Sueldo Neto Final
             Double neto = sueldoBase + totalPercepciones - totalDeducciones;
             nueva.setSueldoNeto(neto);
             
@@ -114,19 +111,20 @@ public class NominaController {
             
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR NÓMINA", detalles);
             auditoriaRepository.save(registro);
-            // =======================================================================
         }
 
         return "redirect:/operaciones/nominas";
     }
 
     /**
-     * Genera un recibo de nómina en formato PDF utilizando OpenPDF incluyendo el desglose de incidencias
+     * Genera un recibo de nómina en formato PDF utilizando OpenPDF
      */
     @GetMapping("/nominas/descargar/{id}")
     public ResponseEntity<byte[]> descargarReciboPdf(@PathVariable("id") Long id) {
         Nomina nomina = nominaRepository.findById(id).orElse(null);
-        if (nomina == null) {
+        
+        // Validación de existencia de nómina y su relación con trabajador
+        if (nomina == null || nomina.getTrabajador() == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
@@ -202,10 +200,11 @@ public class NominaController {
 
             document.close();
 
-            // Configurar los encabezados de respuesta HTTP para forzar la descarga del PDF
+            // Configurar los encabezados de respuesta HTTP
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            String filename = "Recibo_Nomina_" + nomina.getTrabajador().getUsername().replace(" ", "_") + "_" + nomina.getPeriodo() + ".pdf";
+            String empleadoNombre = nomina.getTrabajador().getUsername().replace(" ", "_");
+            String filename = "Recibo_Nomina_" + empleadoNombre + "_" + nomina.getPeriodo() + ".pdf";
             headers.setContentDispositionFormData("attachment", filename);
 
             return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
@@ -223,10 +222,13 @@ public class NominaController {
     public String eliminarNomina(@PathVariable("id") Long id, Authentication authentication) {
         Nomina nomina = nominaRepository.findById(id).orElse(null);
 
+        // Validar que la nómina exista antes de proceder
         if (nomina != null) {
+            String empleadoNombre = (nomina.getTrabajador() != null) ? nomina.getTrabajador().getUsername() : "Empleado no asignado";
+            
             // ==================== GUARDAR REGISTRO EN AUDITORÍA ====================
             String usuarioActivo = (authentication != null) ? authentication.getName() : "Sistema";
-            String detalles = "Eliminó el registro de nómina del empleado '" + nomina.getTrabajador().getUsername() 
+            String detalles = "Eliminó el registro de nómina del empleado '" + empleadoNombre 
                             + "' correspondiente al periodo '" + nomina.getPeriodo() 
                             + "' por un monto de $" + String.format("%.2f", nomina.getSueldoNeto());
             

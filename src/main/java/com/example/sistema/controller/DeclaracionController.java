@@ -2,7 +2,9 @@ package com.example.sistema.controller;
 
 import com.example.sistema.model.Declaracion;
 import com.example.sistema.model.Empresa;
+import com.example.sistema.model.Usuario;
 import com.example.sistema.repository.DeclaracionRepository;
+import com.example.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -20,7 +22,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Principal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -30,46 +34,98 @@ public class DeclaracionController {
     @Autowired
     private DeclaracionRepository declaracionRepository;
 
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
     // Directorio local en el disco C:/ para almacenar los PDFs físicos de los acuses del SAT
     private final String UPLOAD_DIR = "C:/sistema_contable/acuses_sat/";
+
+    /**
+     * Helper para obtener el usuario logueado en el sistema con el parche para el admin de pruebas
+     */
+    private Usuario getUsuarioLogueado(Principal principal) {
+        if (principal == null) throw new RuntimeException("No hay ninguna sesión activa.");
+        
+        // Salvavidas para tu admin de pruebas en memoria
+        if ("admin".equalsIgnoreCase(principal.getName())) {
+            Usuario adminFicticio = new Usuario();
+            adminFicticio.setUsername("admin");
+            adminFicticio.setRol("JEFE");
+            
+            Empresa emp = new Empresa();
+            emp.setId(1L); // <--- CAMBIA ESTE '1' por el ID de empresa que quieras testear con tu admin
+            adminFicticio.setEmpresa(emp);
+            return adminFicticio;
+        }
+
+        return usuarioRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado en el sistema."));
+    }
 
     /**
      * Muestra la pantalla principal con la lista de declaraciones de la empresa activa
      */
     @GetMapping("/declaraciones")
-    public String listarDeclaraciones(Model model) {
-        // TODO: Simulación del ID de la empresa activa (Sustituir por tu lógica de sesión o usuario logueado)
-        Long empresaId = 1L; 
-        
-        List<Declaracion> declaraciones = declaracionRepository.findByEmpresaIdOrderByAnioDescMesDesc(empresaId);
-        
-        model.addAttribute("declaraciones", declaraciones);
-        model.addAttribute("empresaNombre", "OFICINA FISCAL (Declaraciones)");
-        return "declaraciones"; // Esto buscará el archivo declaraciones.html en templates
+    public String listarDeclaraciones(Principal principal, Model model) {
+        if (principal == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            Usuario logueado = getUsuarioLogueado(principal);
+            model.addAttribute("usuarioLogueado", logueado);
+
+            if (logueado.getEmpresa() == null) {
+                model.addAttribute("declaraciones", new ArrayList<>());
+                model.addAttribute("empresaNombre", "Sin Empresa Asignada");
+            } else {
+                Long empresaId = logueado.getEmpresa().getId();
+                // Filtro dinámico directo desde la base de datos por el ID de la empresa del usuario
+                List<Declaracion> declaraciones = declaracionRepository.findByEmpresaIdOrderByAnioDescMesDesc(empresaId);
+                
+                model.addAttribute("declaraciones", declaraciones);
+                model.addAttribute("empresaNombre", "OFICINA FISCAL (Declaraciones)");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("declaraciones", new ArrayList<>());
+        }
+
+        return "declaraciones"; 
     }
 
     /**
      * Procesa el formulario para registrar una nueva obligación/declaración fiscal
      */
     @PostMapping("/declaraciones/guardar")
-    public String guardarDeclaracion(@RequestParam("anio") Integer anio,
+    public String guardarDeclaracion(Principal principal,
+                                     @RequestParam("anio") Integer anio,
                                      @RequestParam("mes") String mes,
                                      @RequestParam("tipo") String tipo,
                                      @RequestParam("fechaVencimiento") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate fechaVencimiento) {
-        
-        Declaracion nueva = new Declaracion();
-        nueva.setAnio(anio);
-        nueva.setMes(mes);
-        nueva.setTipo(tipo);
-        nueva.setFechaVencimiento(fechaVencimiento);
-        nueva.setEstado("PENDIENTE"); // Toda declaración inicia como pendiente
+        if (principal == null) {
+            return "redirect:/login";
+        }
 
-        // Asignar empresa (Simulado, cambiar por tu lógica real)
-        Empresa e = new Empresa();
-        e.setId(1L);
-        nueva.setEmpresa(e);
+        try {
+            Usuario logueado = getUsuarioLogueado(principal);
+            if (logueado.getEmpresa() != null) {
+                Declaracion nueva = new Declaracion();
+                nueva.setAnio(anio);
+                nueva.setMes(mes);
+                nueva.setTipo(tipo);
+                nueva.setFechaVencimiento(fechaVencimiento);
+                nueva.setEstado("PENDIENTE"); // Toda declaración inicia como pendiente
 
-        declaracionRepository.save(nueva);
+                // Asignamos dinámicamente la empresa real del usuario logueado (o la simulada del admin)
+                nueva.setEmpresa(logueado.getEmpresa());
+
+                declaracionRepository.save(nueva);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         return "redirect:/operaciones/declaraciones";
     }
 
@@ -113,8 +169,7 @@ public class DeclaracionController {
     }
 
     /**
-     * Método nuevo: Lee el PDF desde el disco C:/ y lo transmite al navegador 
-     * para que no de pantalla blanca (Whitelabel Error).
+     * Lee el PDF desde el disco C:/ y lo transmite al navegador 
      */
     @GetMapping("/acuses/{filename:.+}")
     @ResponseBody
@@ -125,7 +180,6 @@ public class DeclaracionController {
 
             if (resource.exists() || resource.isReadable()) {
                 return ResponseEntity.ok()
-                        // "inline" hace que el navegador lo intente abrir en pantalla en vez de forzar descarga
                         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                         .contentType(MediaType.APPLICATION_PDF)
                         .body(resource);
@@ -136,5 +190,4 @@ public class DeclaracionController {
             return ResponseEntity.internalServerError().build();
         }
     }
-    
 }

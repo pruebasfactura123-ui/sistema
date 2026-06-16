@@ -71,7 +71,7 @@
             <div>
                 <h2 class="fw-bold m-0" style="color: var(--navy); font-size: 1.3rem;">Cálculo y Control de Nóminas</h2>
             </div>
-            <div>
+            <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')">
                 <button class="btn btn-primary btn-sm px-3 fw-bold rounded-pill" style="font-size: 0.65rem;" data-bs-toggle="modal" data-bs-target="#modalNuevaNomina">
                     <i class="fas fa-calculator me-1"></i> Generar Recibo de Nómina
                 </button>
@@ -103,7 +103,8 @@
                             <td><span th:class="${n.estado == 'PAGADO' ? 'badge-pagado' : 'badge-simulado'}" th:text="${n.estado}"></span></td>
                             <td class="text-center">
                                 <a th:href="@{'/operaciones/nominas/descargar/' + ${n.id}}" class="btn btn-sm btn-outline-primary" style="padding: 2px 6px;" title="PDF"><i class="fas fa-file-pdf"></i></a>
-                                <a th:href="@{'/operaciones/nominas/eliminar/' + ${n.id}}" class="btn btn-sm btn-outline-danger" style="padding: 2px 6px;" onclick="return confirm('¿Borrar?');"><i class="fas fa-trash-alt"></i></a>
+                                <a sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')" 
+                                   th:href="@{'/operaciones/nominas/eliminar/' + ${n.id}}" class="btn btn-sm btn-outline-danger" style="padding: 2px 6px;" onclick="return confirm('¿Borrar?');"><i class="fas fa-trash-alt"></i></a>
                             </td>
                         </tr>
                     </tbody>
@@ -112,74 +113,75 @@
         </div>
     </main>
 
-   <div class="modal fade" id="modalNuevaNomina" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 16px;">
-            <div class="modal-header">
-                <h6 class="modal-title fw-bold">Generar Nueva Nómina</h6>
+    <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')" class="modal fade" id="modalNuevaNomina" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px;">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold">Generar Nueva Nómina</h6>
+                </div>
+                <form th:action="@{/operaciones/nominas/guardar}" method="post" class="modal-body p-4">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
+                    
+                    <label class="small fw-bold">Trabajador</label>
+                    <select name="trabajadorId" class="form-select form-select-sm mb-2" required>
+                        <option value="" disabled selected>-- Seleccionar --</option>
+                        <option th:each="t : ${trabajadores}" th:value="${t.id}" th:text="${t.username}"></option>
+                    </select>
+
+                    <label class="small fw-bold">Periodo de Pago</label>
+                    <input type="text" name="periodo" class="form-control form-control-sm mb-2" placeholder="Ej: 1ra Quincena Junio 2026" required>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="small fw-bold">Sueldo Base ($)</label>
+                            <input type="number" name="sueldoBase" class="form-control form-control-sm mb-2" step="0.01" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="small fw-bold">Días Trabajados</label>
+                            <input type="number" name="diasTrabajados" class="form-control form-control-sm mb-2" value="15" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="small fw-bold">Horas Extra</label>
+                            <input type="number" name="horasExtra" class="form-control form-control-sm mb-2" value="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="small fw-bold">Faltas</label>
+                            <input type="number" name="faltas" class="form-control form-control-sm mb-2" value="0">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="small fw-bold">Retardos</label>
+                            <input type="number" name="retardos" class="form-control form-control-sm mb-2" value="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="small fw-bold">Otras Percepciones ($)</label>
+                            <input type="number" name="percepciones" class="form-control form-control-sm mb-2" value="0.00" step="0.01">
+                        </div>
+                    </div>
+
+                    <label class="small fw-bold">Otras Deducciones ($)</label>
+                    <input type="number" name="deducciones" class="form-control form-control-sm mb-2" value="0.00" step="0.01">
+                    
+                    <label class="small fw-bold">Estatus</label>
+                    <select name="estado" class="form-select form-select-sm mb-2">
+                        <option value="SIMULADO">SIMULADO</option>
+                        <option value="PAGADO">PAGADO</option>
+                    </select>
+                    
+                    <label class="small fw-bold">Fecha de Emisión</label>
+                    <input type="date" name="fechaEmision" class="form-control form-control-sm mb-3" required>
+                    
+                    <button type="submit" class="btn btn-navy w-100 fw-bold rounded-pill">Calcular y Guardar</button>
+                </form>
             </div>
-            <form th:action="@{/operaciones/nominas/guardar}" method="post" class="modal-body p-4">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
-                
-                <label class="small fw-bold">Trabajador</label>
-                <select name="trabajadorId" class="form-select form-select-sm mb-2" required>
-                    <option value="" disabled selected>-- Seleccionar --</option>
-                    <option th:each="t : ${trabajadores}" th:value="${t.id}" th:text="${t.username}"></option>
-                </select>
-
-                <label class="small fw-bold">Periodo de Pago</label>
-                <input type="text" name="periodo" class="form-control form-control-sm mb-2" placeholder="Ej: 1ra Quincena Junio 2026" required>
-                
-                <div class="row">
-                    <div class="col-6">
-                        <label class="small fw-bold">Sueldo Base ($)</label>
-                        <input type="number" name="sueldoBase" class="form-control form-control-sm mb-2" step="0.01" required>
-                    </div>
-                    <div class="col-6">
-                        <label class="small fw-bold">Días Trabajados</label>
-                        <input type="number" name="diasTrabajados" class="form-control form-control-sm mb-2" value="15" required>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-6">
-                        <label class="small fw-bold">Horas Extra</label>
-                        <input type="number" name="horasExtra" class="form-control form-control-sm mb-2" value="0">
-                    </div>
-                    <div class="col-6">
-                        <label class="small fw-bold">Faltas</label>
-                        <input type="number" name="faltas" class="form-control form-control-sm mb-2" value="0">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-6">
-                        <label class="small fw-bold">Retardos</label>
-                        <input type="number" name="retardos" class="form-control form-control-sm mb-2" value="0">
-                    </div>
-                    <div class="col-6">
-                        <label class="small fw-bold">Otras Percepciones ($)</label>
-                        <input type="number" name="percepciones" class="form-control form-control-sm mb-2" value="0.00" step="0.01">
-                    </div>
-                </div>
-
-                <label class="small fw-bold">Otras Deducciones ($)</label>
-                <input type="number" name="deducciones" class="form-control form-control-sm mb-2" value="0.00" step="0.01">
-                
-                <label class="small fw-bold">Estatus</label>
-                <select name="estado" class="form-select form-select-sm mb-2">
-                    <option value="SIMULADO">SIMULADO</option>
-                    <option value="PAGADO">PAGADO</option>
-                </select>
-                
-                <label class="small fw-bold">Fecha de Emisión</label>
-                <input type="date" name="fechaEmision" class="form-control form-control-sm mb-3" required>
-                
-                <button type="submit" class="btn btn-navy w-100 fw-bold rounded-pill">Calcular y Guardar</button>
-            </form>
         </div>
     </div>
-</div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -4,12 +4,12 @@ import com.example.sistema.model.Empresa;
 import com.example.sistema.model.Factura;
 import com.example.sistema.model.Usuario;
 import com.example.sistema.model.Cliente;
+import com.example.sistema.model.Auditoria;
 import com.example.sistema.repository.EmpresaRepository;
 import com.example.sistema.repository.FacturaRepository;
 import com.example.sistema.repository.UsuarioRepository;
 import com.example.sistema.repository.ClienteRepository;
 import com.example.sistema.repository.AuditoriaRepository;
-import com.example.sistema.model.Auditoria;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 // IMPORTS ESTRUCTURADOS DE OPENPDF
@@ -63,8 +63,20 @@ public class FacturaController {
 
     private Usuario getUsuarioLogueado(Principal principal) {
         if (principal == null) throw new RuntimeException("No hay ninguna sesión activa.");
-        return usuarioRepository.findByUsername(principal.getName())
+        
+        Usuario usuario = usuarioRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado en el sistema."));
+        
+        // PARCHE DE BLINDAJE MULTIEMPRESA PARA EL USUARIO ADMINISTRADOR GENERAL
+        if ("admin".equalsIgnoreCase(usuario.getUsername()) && usuario.getEmpresa() == null) {
+            List<Empresa> empresas = empresaRepository.findAll();
+            if (!empresas.isEmpty()) {
+                usuario.setEmpresa(empresas.get(0));
+            } else {
+                throw new RuntimeException("El usuario admin requiere que exista al menos una empresa registrada en la Base de Datos.");
+            }
+        }
+        return usuario;
     }
 
     @GetMapping("/login")
@@ -139,7 +151,7 @@ public class FacturaController {
             }
 
             model.addAttribute("usuarioLogueado", logueado);
-            model.addAttribute("facturas", comprobantesXml); // Solo se envían comprobantes XML
+            model.addAttribute("facturas", comprobantesXml); 
             model.addAttribute("subtotalTotal", ingresos);
             model.addAttribute("ivaTrasladado", ingresos * 0.16);
             model.addAttribute("totalNeto", ingresos - egresos);
@@ -791,9 +803,9 @@ public class FacturaController {
             List<Factura> todas = facturaRepository.findByEmpresaIdAndNombreArchivoNotAndNombreArchivoIsNotNull(idEmpresa, "");
             if (todas == null) todas = new ArrayList<>();
             
-            // FILTRO ESTRICTO: Para impuestos y cálculos fiscales, SOLO tomamos los comprobantes XML válidos (NO manuales)
+            // FILTRO ESTRICTO CORREGIDO: Para impuestos y cálculos fiscales, SOLO tomamos los comprobantes XML válidos (NO manuales)
             List<Factura> comprobantesXml = todas.stream()
-                    .filter(f -> f.getNombreArchivo() == null || !f.getNombreArchivo().startsWith("manual_"))
+                    .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().startsWith("manual_"))
                     .collect(Collectors.toList());
             
             double ingresosSubtotal = comprobantesXml.stream()
