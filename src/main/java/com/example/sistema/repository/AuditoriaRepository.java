@@ -11,8 +11,7 @@ public interface AuditoriaRepository extends JpaRepository<Auditoria, Long> {
     // Trae el historial ordenado del más nuevo al más viejo (Útil para Administradores globales)
     List<Auditoria> findAllByOrderByFechaRegistroDesc();
 
-    // ==================== NUEVO: FILTRADO MULTIEMPRESA ====================
-    // Busca los registros que pertenezcan a la empresa O que no tengan empresa asignada (NULL)
-List<Auditoria> findByEmpresaIdOrEmpresaIsNullOrderByFechaRegistroDesc(Long empresaId);
+    // ==================== SOLUCIÓN: FILTRADO ESTRICTO MULTIEMPRESA ====================
+    // Cambiamos el método para que busque ÚNICAMENTE por el ID de la empresa (sin meter los NULL viejos)
+    List<Auditoria> findByEmpresaIdOrderByFechaRegistroDesc(Long empresaId);
 }
-

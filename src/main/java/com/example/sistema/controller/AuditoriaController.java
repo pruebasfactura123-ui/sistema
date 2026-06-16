@@ -64,13 +64,13 @@ public class AuditoriaController {
                 
                 List<Auditoria> logsFiscales;
                 
-                // ==================== CORRECCIÓN: FILTRADO SEGURO DE AUDITORÍA ====================
+                // ==================== CORRECCIÓN: FILTRADO ESTRICTO DE AUDITORÍA ====================
                 if (logueado.getEmpresa() == null) {
                     logsFiscales = new ArrayList<>();
                 } else {
                     Long empresaId = logueado.getEmpresa().getId();
-                    // Jalar solo las auditorías registradas bajo la clave única de la empresa del usuario activo
-                logsFiscales = auditoriaRepository.findByEmpresaIdOrEmpresaIsNullOrderByFechaRegistroDesc(empresaId);
+                    // Jalar ESTRICTAMENTE las auditorías que corresponden al ID de tu empresa activa
+                    logsFiscales = auditoriaRepository.findByEmpresaIdOrderByFechaRegistroDesc(empresaId);
                 }
                 model.addAttribute("auditorias", logsFiscales);
 
