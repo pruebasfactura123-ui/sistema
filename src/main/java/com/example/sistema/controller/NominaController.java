@@ -41,21 +41,53 @@ public class NominaController {
     private AuditoriaRepository auditoriaRepository;
 
     /**
-     * Muestra el historial de nóminas y el formulario para simular/generar una nueva
+     * Muestra el historial de nóminas y el formulario filtrado por la empresa del usuario activo
      */
     @GetMapping("/nominas")
-    public String listarNominas(Model model) {
-        List<Nomina> nominas = nominaRepository.findAllByOrderByFechaEmisionDesc();
-        List<Usuario> trabajadores = usuarioRepository.findAll(); 
+    public String listarNominas(Model model, Authentication authentication) {
+        if (authentication == null) {
+            return "redirect:/login";
+        }
+
+        // Obtener los detalles del usuario con sesión activa
+        String usernameActivo = authentication.getName();
+        Usuario usuarioLogueado = usuarioRepository.findByUsername(usernameActivo).orElse(null);
+
+        if (usuarioLogueado == null) {
+            return "redirect:/login";
+        }
+
+        List<Nomina> nominas;
+        List<Usuario> trabajadores;
+
+        // Separar lógica por Roles usando el aislamiento de empresas
+        if (usuarioLogueado.getRol().equals("JEFE") || usuarioLogueado.getRol().equals("GERENTE")) {
+            Long empresaId = usuarioLogueado.getEmpresa().getId();
+            // Trae solo las nóminas pertenecientes a empleados de su empresa
+            nominas = nominaRepository.findByTrabajadorEmpresaIdOrderByFechaEmisionDesc(empresaId);
+            // Llena el selector/dropdown solo con trabajadores de su empresa
+            trabajadores = usuarioRepository.findByEmpresaId(empresaId);
+        } else {
+            // Si es un empleado regular, solo tiene permitido ver sus propias nóminas
+            nominas = nominaRepository.findByTrabajadorOrderByFechaEmisionDesc(usuarioLogueado);
+            trabajadores = List.of(usuarioLogueado);
+        }
 
         model.addAttribute("nominas", nominas);
         model.addAttribute("trabajadores", trabajadores);
-        model.addAttribute("empresaNombre", "OFICINA FISCAL (Nóminas)");
+        
+        // CORRECCIÓN: Uso de getRazonSocial() de forma segura en lugar de getNombre()
+        String nombreEmpresa = "OFICINA FISCAL";
+        if (usuarioLogueado.getEmpresa() != null && usuarioLogueado.getEmpresa().getRazonSocial() != null) {
+            nombreEmpresa = usuarioLogueado.getEmpresa().getRazonSocial();
+        }
+        model.addAttribute("empresaNombre", nombreEmpresa + " (Nóminas)");
+        
         return "nominas"; 
     }
 
     /**
-     * Procesar el registro o simulación de un recibo de nómina incluyendo incidencias
+     * Procesar el registro seguro de un recibo de nómina validando la pertenencia de empresa
      */
     @PostMapping("/nominas/guardar")
     public String guardarNomina(@RequestParam("trabajadorId") Long trabajadorId,
@@ -71,9 +103,19 @@ public class NominaController {
                                 @RequestParam("fechaEmision") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate fechaEmision,
                                 Authentication authentication) {
         
+        if (authentication == null) return "redirect:/login";
+
+        String usuarioActivo = authentication.getName();
+        Usuario usuarioLogueado = usuarioRepository.findByUsername(usuarioActivo).orElse(null);
         Usuario trabajador = usuarioRepository.findById(trabajadorId).orElse(null);
         
-        if (trabajador != null) {
+        if (usuarioLogueado != null && trabajador != null) {
+            
+            // BLINDAJE: Evitar que mediante alteraciones externas se registre un empleado de otra empresa
+            if (!trabajador.getEmpresa().getId().equals(usuarioLogueado.getEmpresa().getId())) {
+                return "redirect:/operaciones/nominas?error=NoAutorizado";
+            }
+
             Nomina nueva = new Nomina();
             nueva.setTrabajador(trabajador);
             nueva.setPeriodo(periodo);
@@ -84,17 +126,13 @@ public class NominaController {
             nueva.setRetardos(retardos);
 
             // CÁLCULO MATEMÁTICO BASADO EN INCIDENCIAS
-            // 1. Horas extra ($100 MXN c/u) agregadas a percepciones adicionales
             Double totalPercepciones = percepciones + (horasExtra * 100.0);
-            
-            // 2. Descuento de días por faltas (Asumiendo periodo quincenal de 15 días)
             Double sueldoDiario = sueldoBase / 15.0;
             Double totalDeducciones = deducciones + (faltas * sueldoDiario);
 
             nueva.setPercepciones(totalPercepciones);
             nueva.setDeducciones(totalDeducciones);
 
-            // 3. Cálculo del Sueldo Neto Final
             Double neto = sueldoBase + totalPercepciones - totalDeducciones;
             nueva.setSueldoNeto(neto);
             
@@ -104,7 +142,6 @@ public class NominaController {
             nominaRepository.save(nueva);
 
             // ==================== GUARDAR REGISTRO EN AUDITORÍA ====================
-            String usuarioActivo = (authentication != null) ? authentication.getName() : "Sistema";
             String detalles = "Generó una nómina para el empleado '" + trabajador.getUsername() 
                             + "' correspondiente al periodo '" + periodo 
                             + "' con un sueldo neto calculado de $" + String.format("%.2f", neto);
@@ -117,15 +154,35 @@ public class NominaController {
     }
 
     /**
-     * Genera un recibo de nómina en formato PDF utilizando OpenPDF
+     * Genera un recibo de nómina en formato PDF validando que pertenezca a la empresa del usuario
      */
     @GetMapping("/nominas/descargar/{id}")
-    public ResponseEntity<byte[]> descargarReciboPdf(@PathVariable("id") Long id) {
+    public ResponseEntity<byte[]> descargarReciboPdf(@PathVariable("id") Long id, Authentication authentication) {
+        if (authentication == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        String usernameActivo = authentication.getName();
+        Usuario usuarioLogueado = usuarioRepository.findByUsername(usernameActivo).orElse(null);
         Nomina nomina = nominaRepository.findById(id).orElse(null);
         
-        // Validación de existencia de nómina y su relación con trabajador
-        if (nomina == null || nomina.getTrabajador() == null) {
+        if (nomina == null || nomina.getTrabajador() == null || usuarioLogueado == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        // BLINDAJE: Si no es Admin global y la nómina no es de su propia empresa, bloquear acceso
+        if (!usuarioLogueado.getRol().equals("ADMIN")) {
+            Long empresaUsuario = usuarioLogueado.getEmpresa().getId();
+            Long empresaNomina = nomina.getTrabajador().getEmpresa().getId();
+            
+            // Validar si es un empleado común tratando de husmear la nómina de otro
+            if (usuarioLogueado.getRol().equals("EMPLEADO") && !nomina.getTrabajador().getId().equals(usuarioLogueado.getId())) {
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+            // Validar si es un Jefe intentando descargar datos de otra empresa distinta
+            if (!empresaUsuario.equals(empresaNomina)) {
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
         }
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -133,13 +190,17 @@ public class NominaController {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            // Fuentes para el diseño
+            // CORRECCIÓN: Asegurada la fuente estándar Font.HELVETICA
             Font tituloFont = new Font(Font.HELVETICA, 18, Font.BOLD);
             Font subtituloFont = new Font(Font.HELVETICA, 12, Font.BOLD);
             Font cuerpoFont = new Font(Font.HELVETICA, 10, Font.NORMAL);
 
-            // Encabezado del Recibo
-            Paragraph titulo = new Paragraph("OFICINA FISCAL", tituloFont);
+            // CORRECCIÓN: Uso de getRazonSocial() para pintar el nombre corporativo en el PDF
+            String nombreEmpresaPdf = "OFICINA FISCAL";
+            if (nomina.getTrabajador().getEmpresa() != null && nomina.getTrabajador().getEmpresa().getRazonSocial() != null) {
+                nombreEmpresaPdf = nomina.getTrabajador().getEmpresa().getRazonSocial().toUpperCase();
+            }
+            Paragraph titulo = new Paragraph(nombreEmpresaPdf, tituloFont);
             titulo.setAlignment(Element.ALIGN_CENTER);
             document.add(titulo);
 
@@ -148,7 +209,6 @@ public class NominaController {
             subtitulo.setSpacingAfter(20);
             document.add(subtitulo);
 
-            // Tabla de Datos Generales e Incidencias
             PdfPTable tableGeneral = new PdfPTable(2);
             tableGeneral.setWidthPercentage(100);
             tableGeneral.setSpacingAfter(15);
@@ -173,7 +233,6 @@ public class NominaController {
             
             document.add(tableGeneral);
 
-            // Tabla de desglose de conceptos financieros
             PdfPTable tableDesglose = new PdfPTable(2);
             tableDesglose.setWidthPercentage(100);
             tableDesglose.setSpacingAfter(20);
@@ -193,14 +252,12 @@ public class NominaController {
 
             document.add(tableDesglose);
 
-            // Nota al pie
-            Paragraph pie = new Paragraph("Este documento es una simulación interna de la Oficina Fiscal y carece de validez fiscal ante el SAT.", new Font(Font.HELVETICA, 8, Font.ITALIC));
+            Paragraph pie = new Paragraph("Este documento es una simulación interna y carece de validez fiscal oficial ante el SAT.", new Font(Font.HELVETICA, 8, Font.ITALIC));
             pie.setAlignment(Element.ALIGN_CENTER);
             document.add(pie);
 
             document.close();
 
-            // Configurar los encabezados de respuesta HTTP
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
             String empleadoNombre = nomina.getTrabajador().getUsername().replace(" ", "_");
@@ -216,25 +273,36 @@ public class NominaController {
     }
 
     /**
-     * Elimina un registro de nómina
+     * Elimina un registro de nómina asegurando protección perimetral multiempresa
      */
     @GetMapping("/nominas/eliminar/{id}")
     public String eliminarNomina(@PathVariable("id") Long id, Authentication authentication) {
+        if (authentication == null) return "redirect:/login";
+
+        String usuarioActivo = authentication.getName();
+        Usuario usuarioLogueado = usuarioRepository.findByUsername(usuarioActivo).orElse(null);
         Nomina nomina = nominaRepository.findById(id).orElse(null);
 
-        // Validar que la nómina exista antes de proceder
-        if (nomina != null) {
+        if (nomina != null && usuarioLogueado != null) {
+            
+            // BLINDAJE: Bloquear si un jefe intenta mandar un ID por URL de una nómina ajena
+            if (!usuarioLogueado.getRol().equals("ADMIN")) {
+                Long empresaUsuario = usuarioLogueado.getEmpresa().getId();
+                Long empresaNomina = nomina.getTrabajador().getEmpresa().getId();
+                if (!empresaUsuario.equals(empresaNomina)) {
+                    return "redirect:/operaciones/nominas?error=NoAutorizado";
+                }
+            }
+
             String empleadoNombre = (nomina.getTrabajador() != null) ? nomina.getTrabajador().getUsername() : "Empleado no asignado";
             
             // ==================== GUARDAR REGISTRO EN AUDITORÍA ====================
-            String usuarioActivo = (authentication != null) ? authentication.getName() : "Sistema";
             String detalles = "Eliminó el registro de nómina del empleado '" + empleadoNombre 
                             + "' correspondiente al periodo '" + nomina.getPeriodo() 
                             + "' por un monto de $" + String.format("%.2f", nomina.getSueldoNeto());
             
             Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR NÓMINA", detalles);
             auditoriaRepository.save(registro);
-            // =======================================================================
 
             nominaRepository.deleteById(id);
         }
