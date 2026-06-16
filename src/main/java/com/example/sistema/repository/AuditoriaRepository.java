@@ -12,6 +12,7 @@ public interface AuditoriaRepository extends JpaRepository<Auditoria, Long> {
     List<Auditoria> findAllByOrderByFechaRegistroDesc();
 
     // ==================== NUEVO: FILTRADO MULTIEMPRESA ====================
-    // Recupera la bitácora vinculada únicamente a la empresa del usuario en sesión
-    List<Auditoria> findByEmpresaIdOrderByFechaRegistroDesc(Long empresaId);
+    // Busca los registros que pertenezcan a la empresa O que no tengan empresa asignada (NULL)
+List<Auditoria> findByEmpresaIdOrEmpresaIsNullOrderByFechaRegistroDesc(Long empresaId);
 }
+

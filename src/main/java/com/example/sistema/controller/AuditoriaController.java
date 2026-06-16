@@ -70,7 +70,7 @@ public class AuditoriaController {
                 } else {
                     Long empresaId = logueado.getEmpresa().getId();
                     // Jalar solo las auditorías registradas bajo la clave única de la empresa del usuario activo
-                    logsFiscales = auditoriaRepository.findByEmpresaIdOrderByFechaRegistroDesc(empresaId);
+                logsFiscales = auditoriaRepository.findByEmpresaIdOrEmpresaIsNullOrderByFechaRegistroDesc(empresaId);
                 }
                 model.addAttribute("auditorias", logsFiscales);
 
