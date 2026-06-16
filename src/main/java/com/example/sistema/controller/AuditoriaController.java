@@ -3,7 +3,7 @@ package com.example.sistema.controller;
 import com.example.sistema.model.Asistencia;
 import com.example.sistema.model.Auditoria;
 import com.example.sistema.model.Usuario;
-import com.example.sistema.model.Empresa; // Asegúrate de importar tu modelo Empresa
+import com.example.sistema.model.Empresa;
 import com.example.sistema.repository.AsistenciaRepository;
 import com.example.sistema.repository.AuditoriaRepository;
 import com.example.sistema.repository.UsuarioRepository;
@@ -62,8 +62,16 @@ public class AuditoriaController {
             String rol = logueado.getRol() != null ? logueado.getRol().toUpperCase() : "";
             if ("JEFE".equals(rol) || "GERENTE".equals(rol)) {
                 
-                // 1. Cargar movimientos del sistema
-                List<Auditoria> logsFiscales = auditoriaRepository.findAllByOrderByFechaRegistroDesc();
+                List<Auditoria> logsFiscales;
+                
+                // ==================== CORRECCIÓN: FILTRADO SEGURO DE AUDITORÍA ====================
+                if (logueado.getEmpresa() == null) {
+                    logsFiscales = new ArrayList<>();
+                } else {
+                    Long empresaId = logueado.getEmpresa().getId();
+                    // Jalar solo las auditorías registradas bajo la clave única de la empresa del usuario activo
+                    logsFiscales = auditoriaRepository.findByEmpresaIdOrderByFechaRegistroDesc(empresaId);
+                }
                 model.addAttribute("auditorias", logsFiscales);
 
                 // 2. Cargar asistencias filtradas estrictamente
@@ -79,6 +87,11 @@ public class AuditoriaController {
                             .collect(Collectors.toList());
                 }
                 model.addAttribute("asistencias", listaAsistencias);
+                
+                // Colocar dinámicamente la Razón Social en la vista (Mismo estándar de Nóminas)
+                String nombreEmpresa = (logueado.getEmpresa() != null && logueado.getEmpresa().getRazonSocial() != null) 
+                        ? logueado.getEmpresa().getRazonSocial() : "OFICINA FISCAL";
+                model.addAttribute("empresaNombre", nombreEmpresa);
                 
             } else {
                 // Listas vacías si es un empleado común por seguridad

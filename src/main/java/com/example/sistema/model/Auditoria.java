@@ -23,14 +23,28 @@ public class Auditoria {
     @Column(name = "fecha_registro")
     private LocalDateTime fechaRegistro;
 
+    // ==================== NUEVO: RELACIÓN CON EMPRESA ====================
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empresa_id", nullable = true) // nullable = true por si hay admins globales sin empresa
+    private Empresa empresa;
+
     // Constructor vacío obligatorio
     public Auditoria() {}
 
-    // Constructor práctico para guardar eventos
+    // Constructor antiguo (lo mantenemos para no romper otras partes del código si se usa)
     public Auditoria(String usuario, String accion, String detalles) {
         this.usuario = usuario;
         this.accion = accion;
         this.detalles = detalles;
+        this.fechaRegistro = LocalDateTime.now();
+    }
+
+    // NUEVO: Constructor práctico que recibe la empresa para el aislamiento directo
+    public Auditoria(String usuario, String accion, String detalles, Empresa empresa) {
+        this.usuario = usuario;
+        this.accion = accion;
+        this.detalles = detalles;
+        this.empresa = empresa;
         this.fechaRegistro = LocalDateTime.now();
     }
 
@@ -49,4 +63,8 @@ public class Auditoria {
 
     public LocalDateTime getFechaRegistro() { return fechaRegistro; }
     public void setFechaRegistro(LocalDateTime fechaRegistro) { this.fechaRegistro = fechaRegistro; }
+
+    // NUEVO: Getter y Setter para Empresa
+    public Empresa getEmpresa() { return empresa; }
+    public void setEmpresa(Empresa empresa) { this.empresa = empresa; }
 }
