@@ -106,70 +106,87 @@ public class FacturaController {
     }
 
     // =========================================================================
-    // 1. DASHBOARD PRINCIPAL (Muestra Ingresos y Egresos de XML subidos)
-    // =========================================================================
-    @GetMapping("/")
-    public String inicio(Principal principal, 
-                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio, 
-                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin, 
-                         @RequestParam(required = false) String errorPermisoFactura,
-                         Model model) {
-        try {
-            Usuario logueado = getUsuarioLogueado(principal);
-            Long idEmpresa = logueado.getEmpresa().getId();
-            
-            // CORRECCIÓN CLAVE: Usamos métodos limpios de repositorio para jalar todo sin discriminar egresos vacíos
-            List<Factura> todasLasFacturas = (fechaInicio != null && fechaFin != null) 
-                    ? facturaRepository.findByEmpresaIdAndFechaBetween(idEmpresa, fechaInicio, fechaFin) 
-                    : facturaRepository.findByEmpresaId(idEmpresa);
-                    
-            if (todasLasFacturas == null) todasLasFacturas = new ArrayList<>();
-            
-            // FILTRO ESTRICTO: El Dashboard PRINCIPAL solo debe mostrar COMPROBANTES XML subidos (NO facturas manuales)
-            List<Factura> comprobantesXml = todasLasFacturas.stream()
-                    .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().startsWith("manual_"))
-                    .collect(Collectors.toList());
-            
-            double ingresos = comprobantesXml.stream().filter(f -> "INGRESO".equalsIgnoreCase(f.getTipo())).mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
-            double egresos = comprobantesXml.stream().filter(f -> "EGRESO".equalsIgnoreCase(f.getTipo())).mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
-            
-            double[] ingresosMeses = new double[12];
-            double[] egresosMeses = new double[12];
+// 1. DASHBOARD PRINCIPAL (Muestra Ingresos y Egresos de XML subidos)
+// =========================================================================
+@GetMapping("/")
+public String inicio(Principal principal, 
+                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio, 
+                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin, 
+                     @RequestParam(required = false) String errorPermisoFactura,
+                     Model model) {
+    try {
+        Usuario logueado = getUsuarioLogueado(principal);
+        Long idEmpresa = logueado.getEmpresa().getId();
+        
+        // Carga limpia desde repositorio
+        List<Factura> todasLasFacturas = (fechaInicio != null && fechaFin != null) 
+                ? facturaRepository.findByEmpresaIdAndFechaBetween(idEmpresa, fechaInicio, fechaFin) 
+                : facturaRepository.findByEmpresaId(idEmpresa);
+                
+        if (todasLasFacturas == null) todasLasFacturas = new ArrayList<>();
+        
+        // Filtro seguro para archivos XML
+        List<Factura> comprobantesXml = todasLasFacturas.stream()
+                .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().trim().toLowerCase().startsWith("manual_"))
+                .collect(Collectors.toList());
+        
+        // Sumatorias limpias ignorando mayúsculas/minúsculas o espacios
+        double ingresos = comprobantesXml.stream()
+                .filter(f -> f.getTipo() != null && "INGRESO".equalsIgnoreCase(f.getTipo().trim()))
+                .mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
+                
+        double egresos = comprobantesXml.stream()
+                .filter(f -> f.getTipo() != null && "EGRESO".equalsIgnoreCase(f.getTipo().trim()))
+                .mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
+        
+        double[] ingresosMeses = new double[12];
+        double[] egresosMeses = new double[12];
 
-            for (Factura f : comprobantesXml) {
-                if (f.getFecha() != null) {
-                    int mesIndex = f.getFecha().getMonthValue() - 1;
-                    if ("INGRESO".equalsIgnoreCase(f.getTipo())) {
-                        ingresosMeses[mesIndex] += (f.getTotal() != null ? f.getTotal() : 0.0);
-                    } else if ("EGRESO".equalsIgnoreCase(f.getTipo())) {
-                        egresosMeses[mesIndex] += (f.getTotal() != null ? f.getTotal() : 0.0);
-                    }
+        for (Factura f : comprobantesXml) {
+            if (f.getFecha() != null && f.getTipo() != null) {
+                int mesIndex = f.getFecha().getMonthValue() - 1;
+                String tipoLimpio = f.getTipo().trim();
+                if ("INGRESO".equalsIgnoreCase(tipoLimpio)) {
+                    ingresosMeses[mesIndex] += (f.getTotal() != null ? f.getTotal() : 0.0);
+                } else if ("EGRESO".equalsIgnoreCase(tipoLimpio)) {
+                    egresosMeses[mesIndex] += (f.getTotal() != null ? f.getTotal() : 0.0);
                 }
             }
+        }
 
-            model.addAttribute("datosIngresos", ingresosMeses);
-            model.addAttribute("datosEgresos", egresosMeses);
+        // Enviar arrays a las gráficas
+        model.addAttribute("datosIngresos", ingresosMeses);
+        model.addAttribute("datosEgresos", egresosMeses);
 
-            if (errorPermisoFactura != null) {
-                model.addAttribute("errorPermisoFactura", true);
-            }
+        if (errorPermisoFactura != null) {
+            model.addAttribute("errorPermisoFactura", true);
+        }
 
-            model.addAttribute("usuarioLogueado", logueado);
-            model.addAttribute("facturas", comprobantesXml); 
-            model.addAttribute("subtotalTotal", ingresos);
-            model.addAttribute("ivaTrasladado", ingresos * 0.16);
-            model.addAttribute("totalNeto", ingresos - egresos); // Refleja el balance real entre ambos
-            model.addAttribute("xmlProcesados", comprobantesXml.size());
-            
-            if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
-                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            } else {
-                model.addAttribute("empresaNombre", "OFICINA FISCAL");
-            }
-        } catch (Exception e) { model.addAttribute("facturas", new ArrayList<>()); }
-        return "index";
+        model.addAttribute("usuarioLogueado", logueado);
+        
+        // SOLUCIÓN DOBLE: Seteamos ambos nombres para evitar cualquier desajuste con el index.html
+        model.addAttribute("comprobantes", comprobantesXml); 
+        model.addAttribute("facturas", comprobantesXml); 
+        
+        // Tarjetas superiores del Dashboard
+        model.addAttribute("subtotalTotal", ingresos);
+        model.addAttribute("ivaTrasladado", ingresos * 0.16);
+        model.addAttribute("totalNeto", ingresos - egresos); 
+        model.addAttribute("xmlProcesados", comprobantesXml.size());
+        
+        if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
+            model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+        } else {
+            model.addAttribute("empresaNombre", "OFICINA FISCAL");
+        }
+        
+    } catch (Exception e) { 
+        e.printStackTrace();
+        model.addAttribute("comprobantes", new ArrayList<>()); 
+        model.addAttribute("facturas", new ArrayList<>()); 
     }
-
+    return "index";
+}
     @GetMapping("/facturas/nueva")
     public String nuevaFactura(Principal principal, Model model) {
         try {

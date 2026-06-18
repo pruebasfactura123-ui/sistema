@@ -168,7 +168,7 @@
         </div>
 
         <div class="row g-3 mb-4">
-            <div class="col-md-3">
+            <div class="col-md">
                 <div class="card-custom d-flex align-items-center gap-3">
                     <div class="stat-icon bg-success bg-opacity-10" style="color: var(--verde-ingreso);"><i class="fas fa-arrow-trend-up"></i></div>
                     <div>
@@ -177,7 +177,16 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md">
+                <div class="card-custom d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-danger bg-opacity-10" style="color: var(--rojo-egreso);"><i class="fas fa-arrow-trend-down"></i></div>
+                    <div>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.55rem; letter-spacing: 0.5px;">Egresos Totales</small>
+                        <h4 class="fw-bold m-0" style="color: var(--navy); font-size: 1.05rem;" th:text="${'$' + #numbers.formatDecimal((subtotalTotal ?: 0) - (totalNeto ?: 0), 1, 2)}">$0.00</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md">
                 <div class="card-custom d-flex align-items-center gap-3">
                     <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-university"></i></div>
                     <div>
@@ -186,7 +195,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md">
                 <div class="card-custom d-flex align-items-center gap-3">
                     <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="fas fa-wallet"></i></div>
                     <div>
@@ -195,7 +204,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md">
                 <div class="card-custom d-flex align-items-center gap-3">
                     <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-file-invoice"></i></div>
                     <div>
@@ -292,7 +301,7 @@
                     <div id="chartWrapper">
                         <canvas id="chartDona"></canvas>
                         <div class="chart-center-text">
-                            <div class="text-muted text-uppercase mb-0" style="font-size: 0.45rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;">Total</div>
+                            <div class="text-muted text-uppercase mb-0" style="font-size: 0.45rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;">Neto</div>
                             <div class="fw-bold text-navy" id="lblTotalCentro" style="font-size: 0.8rem; white-space: nowrap;">$0.00</div>
                         </div>
                     </div>
@@ -428,9 +437,12 @@
             const canvasDona = document.getElementById('chartDona');
             if (canvasDona) {
                 const ctxDona = canvasDona.getContext('2d');
-                const ing = /*[[${subtotalTotal != null ? subtotalTotal : 0}]]*/ 0;
-                const neto = /*[[${totalNeto != null ? totalNeto : 0}]]*/ 0;
-                const egr = ing - neto; 
+                const ing = parseFloat(/*[[${subtotalTotal != null ? subtotalTotal : 0}]]*/ 0);
+                const neto = parseFloat(/*[[${totalNeto != null ? totalNeto : 0}]]*/ 0);
+                
+                let egr = ing - neto;
+                if (egr < 0) egr = 0;
+                
                 const granTotal = ing + egr;
 
                 const formatter = new Intl.NumberFormat('es-MX', {
@@ -446,7 +458,7 @@
                     porcEgr = ((egr / granTotal) * 100).toFixed(1);
                 }
 
-                document.getElementById('lblTotalCentro').innerText = formatter.format(granTotal);
+                document.getElementById('lblTotalCentro').innerText = formatter.format(neto);
                 document.getElementById('lblIngresosDetalle').innerText = `${formatter.format(ing)} (${porcIng}%)`;
                 document.getElementById('lblEgresosDetalle').innerText = `${formatter.format(egr)} (${porcEgr}%)`;
 
@@ -455,7 +467,7 @@
                     data: { 
                         labels: ['Ingresos', 'Egresos'], 
                         datasets: [{ 
-                            data: (ing === 0 && egr === 0 ? [1, 0.01] : [ing, egr]), 
+                            data: (ing === 0 && egr === 0 ? [1, 0] : [ing, egr]), 
                             backgroundColor: [colorVerde, colorRojo], 
                             borderWidth: 0 
                         }] 
