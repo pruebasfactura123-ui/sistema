@@ -14,8 +14,8 @@ public class Factura {
     @Column(length = 500)
     private String rfcEmisor;
 
-    @Column(length = 15)
-    private String rfcCliente; 
+    @Column(length = 255) 
+    private String rfcCliente;
 
     @Column(name = "nombre_archivo")
     private String nombreArchivo; 
