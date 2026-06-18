@@ -2,14 +2,17 @@ package com.example.sistema.controller;
 
 import com.example.sistema.model.Cliente;
 import com.example.sistema.model.Usuario;
+import com.example.sistema.model.Auditoria; // <-- Importación agregada
 import com.example.sistema.repository.ClienteRepository;
 import com.example.sistema.repository.UsuarioRepository;
+import com.example.sistema.repository.AuditoriaRepository; // <-- Importación agregada
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable; // <-- Importación agregada
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,13 +26,15 @@ public class ClienteController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private AuditoriaRepository auditoriaRepository; // <-- Inyección agregada
+
     // Cargar la página con la lista filtrada por la empresa del usuario logueado
     @GetMapping("/clientes")
     public String listarClientes(Principal principal, Model model) {
         if (principal == null) return "redirect:/login";
         
         try {
-            // 1. Obtener los datos de la empresa del usuario en sesión
             Usuario logueado = usuarioRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
             
@@ -39,16 +44,14 @@ public class ClienteController {
             
             Long empresaId = logueado.getEmpresa().getId();
 
-            // CORRECCIÓN CLAVE: Usamos 'Cliente' con mayúscula y el método seguro 'findClientesPorEmpresa'
             List<Cliente> listaClientes = clienteRepository.findClientesPorEmpresa(empresaId);
             if (listaClientes == null) {
-                listaClientes = new ArrayList<>(); // Si viene null de la BD, inicializamos una lista limpia
+                listaClientes = new ArrayList<>();
             }
             
             model.addAttribute("clientes", listaClientes);
             model.addAttribute("clienteNuevo", new Cliente()); 
             
-            // Mantener el nombre de la empresa arriba en el diseño
             if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
                 model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             } else {
@@ -58,7 +61,6 @@ public class ClienteController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            // En lugar de mandar una pantalla blanca de error 500, mandamos listas seguras para que pinte la interfaz vacía
             model.addAttribute("clientes", new ArrayList<Cliente>());
             model.addAttribute("clienteNuevo", new Cliente());
             model.addAttribute("empresaNombre", "ERROR SISTEMA");
@@ -68,26 +70,70 @@ public class ClienteController {
         return "clientes"; 
     }
 
-    // Guardar nuevo cliente ASOCIANDO su empresa
+    // 1. Guardar nuevo cliente ASOCIANDO su empresa Y REGISTRANDO AUDITORÍA
     @PostMapping("/clientes/guardar")
     public String guardarCliente(Principal principal, @ModelAttribute("clienteNuevo") Cliente cliente) {
         if (principal == null) return "redirect:/login";
 
         try {
-            // 1. Buscar al usuario que está guardando el registro
             Usuario logueado = usuarioRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-            // 2. ASIGNARLE la empresa del usuario al cliente para evitar el campo NULL
+            // Asignar empresa al cliente
+            cliente.setNombre(cliente.getNombre().trim().toUpperCase());
+            cliente.setRfc(cliente.getRfc().trim().toUpperCase());
             cliente.setEmpresa(logueado.getEmpresa());
 
-            // 3. Guardar con la relación establecida
+            // Guardar cliente en BD
             clienteRepository.save(cliente);
+
+            // REGISTRO EN BITÁCORA
+            String usuarioActivo = logueado.getUsername();
+            String detalles = "Agregó un nuevo cliente al sistema: " + cliente.getNombre() 
+                            + " con RFC: " + cliente.getRfc();
+                            
+            Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
+            auditoriaRepository.save(registro);
+
         } catch (Exception e) {
             e.printStackTrace();
             return "redirect:/clientes?error";
         }
 
         return "redirect:/clientes?exito";
+    }
+
+    // 2. NUEVO MÉTODO: Mapeo exacto para solucionar el Error 404 del botón "Baja"
+    @PostMapping("/clientes/eliminar/{id}")
+    public String eliminarCliente(Principal principal, @PathVariable Long id) {
+        if (principal == null) return "redirect:/login";
+
+        try {
+            Usuario logueado = usuarioRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            
+            // Filtro de seguridad por Roles tolerantes a la baja
+            if ("JEFE".equalsIgnoreCase(logueado.getRol()) || "GERENTE".equalsIgnoreCase(logueado.getRol())) {
+                
+                clienteRepository.findById(id).ifPresent(c -> {
+                    // Verificamos que el cliente pertenezca a la misma empresa del usuario logueado
+                    if (c.getEmpresa() != null && c.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
+                        
+                        // Generar la bitácora antes de destruirlo de la BD
+                        String detalles = "Eliminó del sistema al Cliente: " + c.getNombre() + " (RFC: " + c.getRfc() + ")";
+                        Auditoria registro = new Auditoria(logueado.getUsername(), "ELIMINAR CLIENTE", detalles, logueado.getEmpresa());
+                        auditoriaRepository.save(registro);
+
+                        // Eliminación física
+                        clienteRepository.deleteById(id);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "redirect:/clientes?errorEliminar";
+        }
+
+        return "redirect:/clientes?exitoEliminar";
     }
 }
