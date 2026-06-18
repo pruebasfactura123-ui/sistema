@@ -406,28 +406,34 @@ public class FacturaController {
         return "historial-facturas";
     }
 
-    @PostMapping("/clientes/eliminar/{id}")
-    public String eliminarCliente(Principal principal, @PathVariable Long id) {
+  @PostMapping("/clientes/crear")
+    public String crearCliente(Principal principal, 
+                               @RequestParam String nombre, 
+                               @RequestParam String rfc) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
-            if ("JEFE".equalsIgnoreCase(logueado.getRol()) || "GERENTE".equalsIgnoreCase(logueado.getRol())) {
-                clienteRepository.findById(id).ifPresent(c -> {
-                    if (c.getEmpresa() != null && c.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
-                        
-                        // CORREGIDO AUDITORÍA 3: ELIMINAR CLIENTE CON EMPRESA
-                        String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-                        String detalles = "Eliminó al Cliente: " + c.getNombre() + " (RFC: " + c.getRfc() + ") con ID: " + id;
-                        Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles, logueado.getEmpresa());
-                        auditoriaRepository.save(registro);
+            
+            // 1. Crear y mapear el nuevo cliente a la empresa actual
+            Cliente nuevoCliente = new Cliente();
+            nuevoCliente.setNombre(nombre.trim().toUpperCase());
+            nuevoCliente.setRfc(rfc.trim().toUpperCase());
+            nuevoCliente.setEmpresa(logueado.getEmpresa());
+            
+            clienteRepository.save(nuevoCliente);
 
-                        clienteRepository.deleteById(id);
-                    }
-                });
-            }
-        } catch (Exception e) { e.printStackTrace(); }
+            // 2. Registrar la acción en la Auditoría con la Empresa vinculada
+            String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
+            String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
+                            + " con RFC: " + nuevoCliente.getRfc();
+                            
+            Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
+            auditoriaRepository.save(registro);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return "redirect:/clientes";
     }
-
     @GetMapping("/usuarios")
     public String listarTrabajadores(Principal principal, Model model) {
         try {
