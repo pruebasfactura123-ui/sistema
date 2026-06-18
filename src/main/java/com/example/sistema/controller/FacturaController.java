@@ -312,11 +312,11 @@ public class FacturaController {
 
             facturaRepository.save(factura);
 
-            // AUDITORÍA: CREACIÓN MANUAL
+            // CORREGIDO AUDITORÍA 1: CREACIÓN MANUAL CON EMPRESA
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Creó factura manual (" + tipo + ") Folio: " + uuidCfdi 
                             + " para el Cliente: " + rfcLimpio + " por un Total de $" + String.format("%.2f", total);
-            Auditoria registro = new Auditoria(usuarioActivo, "CREAR FACTURA MANUAL", detalles);
+            Auditoria registro = new Auditoria(usuarioActivo, "CREAR FACTURA MANUAL", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
             return ResponseEntity.ok().body("{\"status\":\"success\",\"uuid\":\"" + uuidCfdi + "\",\"id\":" + factura.getId() + "}");
@@ -366,11 +366,11 @@ public class FacturaController {
                     f.setTipo(tipo);
                     facturaRepository.save(f);
 
-                    // AUDITORÍA: MODIFICACIÓN
+                    // CORREGIDO AUDITORÍA 2: MODIFICACIÓN CON EMPRESA
                     String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
                     String detalles = "Modificó datos de la factura ID: " + id 
                                     + ". Nuevo Cliente: " + rfcCliente.trim() + ", Nuevo Total: $" + String.format("%.2f", total);
-                    Auditoria registro = new Auditoria(usuarioActivo, "MODIFICAR FACTURA", detalles);
+                    Auditoria registro = new Auditoria(usuarioActivo, "MODIFICAR FACTURA", detalles, logueado.getEmpresa());
                     auditoriaRepository.save(registro);
                 }
             });
@@ -384,7 +384,7 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
             
-            // FILTRO ESTRICTO: El Historial de Facturas MANUALES solo debe traer las que empiezan con "manual_"
+            // FILTR0 ESTRICTO: El Historial de Facturas MANUALES solo debe traer las que empiezan con "manual_"
             List<Factura> todas = facturaRepository.findByEmpresaIdAndNombreArchivoNotAndNombreArchivoIsNotNull(idEmpresa, "");
             List<Factura> facturasManuales = todas.stream()
                     .filter(f -> f.getNombreArchivo() != null && f.getNombreArchivo().startsWith("manual_"))
@@ -414,9 +414,10 @@ public class FacturaController {
                 clienteRepository.findById(id).ifPresent(c -> {
                     if (c.getEmpresa() != null && c.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
                         
+                        // CORREGIDO AUDITORÍA 3: ELIMINAR CLIENTE CON EMPRESA
                         String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
                         String detalles = "Eliminó al Cliente: " + c.getNombre() + " (RFC: " + c.getRfc() + ") con ID: " + id;
-                        Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles);
+                        Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles, logueado.getEmpresa());
                         auditoriaRepository.save(registro);
 
                         clienteRepository.deleteById(id);
@@ -470,9 +471,10 @@ public class FacturaController {
                     if ("JEFE".equalsIgnoreCase(u.getRol())) return;
                     if (u.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
                         
+                        // CORREGIDO AUDITORÍA 4: ELIMINAR TRABAJADOR CON EMPRESA
                         String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
                         String detalles = "Eliminó al Trabajador/Usuario: '" + u.getUsername() + "' (Rol: " + u.getRol() + ") con ID: " + id;
-                        Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles);
+                        Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles, logueado.getEmpresa());
                         auditoriaRepository.save(registro);
 
                         usuarioRepository.deleteById(id);
@@ -571,10 +573,11 @@ public class FacturaController {
                     f.setEmpresa(logueado.getEmpresa());
                     facturaRepository.save(f);
 
+                    // CORREGIDO AUDITORÍA 5: CARGAR COMPROBANTE XML CON EMPRESA
                     String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
                     String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename() 
                                     + "' vinculando una factura de tipo " + f.getTipo() + " por $" + String.format("%.2f", f.getTotal());
-                    Auditoria registro = new Auditoria(usuarioActivo, "CARGAR XML", detalles);
+                    Auditoria registro = new Auditoria(usuarioActivo, "CARGAR XML", detalles, logueado.getEmpresa());
                     auditoriaRepository.save(registro);
                 }
             } catch (Exception e) { e.printStackTrace(); }
@@ -770,7 +773,8 @@ public class FacturaController {
                                     + " | Cliente: " + f.getRfcCliente() 
                                     + " | Monto: $" + String.format("%.2f", f.getTotal());
                     
-                    Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles);
+                    // CORREGIDO AUDITORÍA 6: ELIMINAR FACTURA CON EMPRESA
+                    Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles, logueado.getEmpresa());
                     auditoriaRepository.save(registro);
 
                     if (f.getNombreArchivo() != null && !f.getNombreArchivo().isEmpty()) {
