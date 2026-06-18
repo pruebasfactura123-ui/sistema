@@ -564,16 +564,17 @@ public String inicio(Principal principal,
             return "redirect:/perfil?exito";
         } catch (Exception e) { return "redirect:/perfil?error"; }
     }
-
-   @PostMapping("/subir")
+@PostMapping("/subir")
 public String subir(Principal principal, @RequestParam("archivo") MultipartFile[] archivos) {
     Usuario logueado = getUsuarioLogueado(principal);
     String ruta = BASE_PATH + logueado.getEmpresa().getId() + "/";
     new File(ruta).mkdirs();
     
     for (MultipartFile archivo : archivos) {
+        if (archivo.isEmpty()) continue; // Seguridad por si suben un input vacío
+        
         try {
-            archivo.transferTo(Paths.get(ruta + archivo.getOriginalFilename()));
+            // 1. LEER PRIMERO EL XML DESDE MEMORIA (Antes de transferirlo al disco)
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(true);
             
@@ -586,12 +587,14 @@ public String subir(Principal principal, @RequestParam("archivo") MultipartFile[
                 f.setTotal(Double.parseDouble(comp.getAttribute("Total")));
                 f.setFecha(LocalDate.parse(comp.getAttribute("Fecha").substring(0, 10)));
                 
-                // 1. Detectar tipo de comprobante (E = EGRESO, cualquier otro suele ser INGRESO)
+                // Detectar tipo de comprobante (E = EGRESO, cualquier otro suele ser INGRESO)
                 String tipoComprobante = comp.getAttribute("TipoDeComprobante");
-                f.setTipo("E".equals(tipoComprobante) ? "EGRESO" : "INGRESO");
+                f.setTipo("E".equalsIgnoreCase(tipoComprobante) ? "EGRESO" : "INGRESO");
                 
-                // 2. Extraer los montos base para cálculos del módulo de Impuestos
-                double subtotal = comp.getAttribute("SubTotal") != null ? Double.parseDouble(comp.getAttribute("SubTotal")) : f.getTotal();
+                // Extraer los montos base para cálculos del módulo de Impuestos
+                double subtotal = comp.getAttribute("SubTotal") != null && !comp.getAttribute("SubTotal").isEmpty()
+                        ? Double.parseDouble(comp.getAttribute("SubTotal")) 
+                        : f.getTotal();
                 f.setSubtotal(subtotal);
                 
                 // Extraer o calcular el IVA trasladado/acreditable
@@ -604,13 +607,14 @@ public String subir(Principal principal, @RequestParam("archivo") MultipartFile[
                         totalIva = Double.parseDouble(totalImpTras);
                     }
                 }
+                
                 // Si el XML no trae el atributo explícito, hacemos un cálculo rápido inverso estándar
                 if (totalIva == 0.0 && f.getTotal() > subtotal) {
                     totalIva = f.getTotal() - subtotal;
                 }
                 f.setIva(totalIva);
                 
-                // 3. LÓGICA DE ASIGNACIÓN: Cliente (Receptor) o Proveedor (Emisor)
+                // LÓGICA DE ASIGNACIÓN: Cliente (Receptor) o Proveedor (Emisor)
                 if ("EGRESO".equals(f.getTipo())) {
                     // Si tú gastaste (Egreso), el Receptor eres tú. Necesitamos guardar al EMISOR (tu proveedor)
                     org.w3c.dom.NodeList emisor = doc.getElementsByTagNameNS("*", "Emisor");
@@ -637,6 +641,11 @@ public String subir(Principal principal, @RequestParam("archivo") MultipartFile[
                 
                 f.setNombreArchivo(archivo.getOriginalFilename());
                 f.setEmpresa(logueado.getEmpresa());
+                
+                // 2. AHORA SÍ, GUARDAMOS EL ARCHIVO FÍSICO EN DISCO
+                archivo.transferTo(Paths.get(ruta + archivo.getOriginalFilename()));
+                
+                // 3. GUARDAMOS EN BASE DE DATOS Y BITÁCORA
                 facturaRepository.save(f);
 
                 String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
@@ -646,6 +655,7 @@ public String subir(Principal principal, @RequestParam("archivo") MultipartFile[
                 auditoriaRepository.save(registro);
             }
         } catch (Exception e) { 
+            System.err.println("Error procesando el archivo XML: " + archivo.getOriginalFilename());
             e.printStackTrace(); 
         }
     }
