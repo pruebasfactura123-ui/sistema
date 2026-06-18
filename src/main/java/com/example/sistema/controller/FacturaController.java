@@ -105,6 +105,9 @@ public class FacturaController {
         } catch (Exception e) { e.printStackTrace(); return "redirect:/registrar-empresa?error"; }
     }
 
+    // =========================================================================
+    // 1. DASHBOARD PRINCIPAL (Muestra Ingresos y Egresos de XML subidos)
+    // =========================================================================
     @GetMapping("/")
     public String inicio(Principal principal, 
                          @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio, 
@@ -115,9 +118,10 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
             
+            // CORRECCIÓN CLAVE: Usamos métodos limpios de repositorio para jalar todo sin discriminar egresos vacíos
             List<Factura> todasLasFacturas = (fechaInicio != null && fechaFin != null) 
-                    ? facturaRepository.findByEmpresaIdAndNombreArchivoNotAndNombreArchivoIsNotNullAndFechaBetween(idEmpresa, "", fechaInicio, fechaFin) 
-                    : facturaRepository.findByEmpresaIdAndNombreArchivoNotAndNombreArchivoIsNotNull(idEmpresa, "");
+                    ? facturaRepository.findByEmpresaIdAndFechaBetween(idEmpresa, fechaInicio, fechaFin) 
+                    : facturaRepository.findByEmpresaId(idEmpresa);
                     
             if (todasLasFacturas == null) todasLasFacturas = new ArrayList<>();
             
@@ -154,7 +158,7 @@ public class FacturaController {
             model.addAttribute("facturas", comprobantesXml); 
             model.addAttribute("subtotalTotal", ingresos);
             model.addAttribute("ivaTrasladado", ingresos * 0.16);
-            model.addAttribute("totalNeto", ingresos - egresos);
+            model.addAttribute("totalNeto", ingresos - egresos); // Refleja el balance real entre ambos
             model.addAttribute("xmlProcesados", comprobantesXml.size());
             
             if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
@@ -312,7 +316,6 @@ public class FacturaController {
 
             facturaRepository.save(factura);
 
-            // CORREGIDO AUDITORÍA 1: CREACIÓN MANUAL CON EMPRESA
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Creó factura manual (" + tipo + ") Folio: " + uuidCfdi 
                             + " para el Cliente: " + rfcLimpio + " por un Total de $" + String.format("%.2f", total);
@@ -366,7 +369,6 @@ public class FacturaController {
                     f.setTipo(tipo);
                     facturaRepository.save(f);
 
-                    // CORREGIDO AUDITORÍA 2: MODIFICACIÓN CON EMPRESA
                     String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
                     String detalles = "Modificó datos de la factura ID: " + id 
                                     + ". Nuevo Cliente: " + rfcCliente.trim() + ", Nuevo Total: $" + String.format("%.2f", total);
@@ -378,14 +380,17 @@ public class FacturaController {
         return "redirect:/facturas/historial";
     }
 
+    // =========================================================================
+    // 2. HISTORIAL UNIFICADO DE FACTURAS MANUALES (Se eliminó la duplicidad de la ruta)
+    // =========================================================================
     @GetMapping("/facturas/historial")
     public String historialFacturas(Principal principal, Model model) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
             
-            // FILTR0 ESTRICTO: El Historial de Facturas MANUALES solo debe traer las que empiezan con "manual_"
-            List<Factura> todas = facturaRepository.findByEmpresaIdAndNombreArchivoNotAndNombreArchivoIsNotNull(idEmpresa, "");
+            // Usamos el método nativo por empresa directamente
+            List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
             List<Factura> facturasManuales = todas.stream()
                     .filter(f -> f.getNombreArchivo() != null && f.getNombreArchivo().startsWith("manual_"))
                     .collect(Collectors.toList());
@@ -406,14 +411,13 @@ public class FacturaController {
         return "historial-facturas";
     }
 
-  @PostMapping("/clientes/crear")
+    @PostMapping("/clientes/crear")
     public String crearCliente(Principal principal, 
                                @RequestParam String nombre, 
                                @RequestParam String rfc) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             
-            // 1. Crear y mapear el nuevo cliente a la empresa actual
             Cliente nuevoCliente = new Cliente();
             nuevoCliente.setNombre(nombre.trim().toUpperCase());
             nuevoCliente.setRfc(rfc.trim().toUpperCase());
@@ -421,19 +425,17 @@ public class FacturaController {
             
             clienteRepository.save(nuevoCliente);
 
-            // 2. Registrar la acción en la Auditoría con la Empresa vinculada
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
                             + " con RFC: " + nuevoCliente.getRfc();
-                            
+                                
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
         return "redirect:/clientes";
     }
+
     @GetMapping("/usuarios")
     public String listarTrabajadores(Principal principal, Model model) {
         try {
@@ -477,7 +479,6 @@ public class FacturaController {
                     if ("JEFE".equalsIgnoreCase(u.getRol())) return;
                     if (u.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
                         
-                        // CORREGIDO AUDITORÍA 4: ELIMINAR TRABAJADOR CON EMPRESA
                         String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
                         String detalles = "Eliminó al Trabajador/Usuario: '" + u.getUsername() + "' (Rol: " + u.getRol() + ") con ID: " + id;
                         Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles, logueado.getEmpresa());
@@ -505,9 +506,7 @@ public class FacturaController {
                     }
                 });
             }
-        } catch (Exception e) { 
-            e.printStackTrace(); 
-        }
+        } catch (Exception e) { e.printStackTrace(); }
         return "redirect:/usuarios";
     }
 
@@ -579,7 +578,6 @@ public class FacturaController {
                     f.setEmpresa(logueado.getEmpresa());
                     facturaRepository.save(f);
 
-                    // CORREGIDO AUDITORÍA 5: CARGAR COMPROBANTE XML CON EMPRESA
                     String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
                     String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename() 
                                     + "' vinculando una factura de tipo " + f.getTipo() + " por $" + String.format("%.2f", f.getTotal());
@@ -612,11 +610,12 @@ public class FacturaController {
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
                     .body(resource);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).build();
-        }
+        } catch (Exception e) { return ResponseEntity.status(500).build(); }
     }
 
+    // =========================================================================
+    // 3. GENERACIÓN DE REPORTES PDF (OPENPDF)
+    // =========================================================================
     @GetMapping("/descargar-pdf/{identificador}")
     @ResponseBody
     public ResponseEntity<Resource> descargarPdf(Principal principal, @PathVariable String identificador) {
@@ -766,6 +765,9 @@ public class FacturaController {
         }
     }
 
+    // =========================================================================
+    // 4. ELIMINACIÓN DE REGISTROS FISCALES
+    // =========================================================================
     @PostMapping("/borrar/{id}")
     public String borrarFactura(Principal principal, @PathVariable Long id) {
         try {
@@ -779,7 +781,6 @@ public class FacturaController {
                                     + " | Cliente: " + f.getRfcCliente() 
                                     + " | Monto: $" + String.format("%.2f", f.getTotal());
                     
-                    // CORREGIDO AUDITORÍA 6: ELIMINAR FACTURA CON EMPRESA
                     Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles, logueado.getEmpresa());
                     auditoriaRepository.save(registro);
 
@@ -804,16 +805,21 @@ public class FacturaController {
         return "redirect:/facturas/historial"; 
     }
 
+    // =========================================================================
+    // 5. CÁLCULO DE OPERACIONES DE IMPUESTOS (IVA ACREDITABLE VS TRASLADADO)
+    // =========================================================================
     @GetMapping("/operaciones/impuestos")
     public String calcularImpuestos(Principal principal, Model model) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
             
-            List<Factura> todas = facturaRepository.findByEmpresaIdAndNombreArchivoNotAndNombreArchivoIsNotNull(idEmpresa, "");
+            // Usamos la consulta directa e integral por empresa
+            List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
             if (todas == null) todas = new ArrayList<>();
             
-            // FILTRO ESTRICTO CORREGIDO: Para impuestos y cálculos fiscales, SOLO tomamos los comprobantes XML válidos (NO manuales)
+            // FILTRO FISCAL CORREGIDO: Mantiene la exclusión de las manuales si así lo requiere tu lógica,
+            // pero procesa los XML válidos de Ingreso y Egreso sin peligro de pérdidas por strings vacíos.
             List<Factura> comprobantesXml = todas.stream()
                     .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().startsWith("manual_"))
                     .collect(Collectors.toList());
