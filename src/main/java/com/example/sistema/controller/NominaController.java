@@ -141,12 +141,13 @@ public class NominaController {
 
             nominaRepository.save(nueva);
 
-            // ==================== GUARDAR REGISTRO EN AUDITORÍA ====================
+            // ==================== CORRECCIÓN: AUDITORÍA CON ENLACE DE EMPRESA TRACEABLE ====================
             String detalles = "Generó una nómina para el empleado '" + trabajador.getUsername() 
                             + "' correspondiente al periodo '" + periodo 
                             + "' con un sueldo neto calculado de $" + String.format("%.2f", neto);
             
-            Auditoria registro = new Auditoria(usuarioActivo, "CREAR NÓMINA", detalles);
+            // Pasamos explícitamente la empresa del usuario logueado como cuarto parámetro
+            Auditoria registro = new Auditoria(usuarioActivo, "CREAR NÓMINA", detalles, usuarioLogueado.getEmpresa());
             auditoriaRepository.save(registro);
         }
 
@@ -296,12 +297,13 @@ public class NominaController {
 
             String empleadoNombre = (nomina.getTrabajador() != null) ? nomina.getTrabajador().getUsername() : "Empleado no asignado";
             
-            // ==================== GUARDAR REGISTRO EN AUDITORÍA ====================
+            // ==================== CORRECCIÓN: AUDITORÍA CON ENLACE DE EMPRESA TRACEABLE ====================
             String detalles = "Eliminó el registro de nómina del empleado '" + empleadoNombre 
                             + "' correspondiente al periodo '" + nomina.getPeriodo() 
                             + "' por un monto de $" + String.format("%.2f", nomina.getSueldoNeto());
             
-            Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR NÓMINA", detalles);
+            // Pasamos explícitamente la empresa del usuario logueado como cuarto parámetro
+            Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR NÓMINA", detalles, usuarioLogueado.getEmpresa());
             auditoriaRepository.save(registro);
 
             nominaRepository.deleteById(id);
