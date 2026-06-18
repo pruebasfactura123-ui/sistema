@@ -566,68 +566,102 @@ public String inicio(Principal principal,
     }
 @PostMapping("/subir")
 public String subir(Principal principal, @RequestParam("archivo") MultipartFile[] archivos) {
+    System.out.println("====== INICIANDO PROCESAMIENTO DE ARCHIVOS ======");
     Usuario logueado = getUsuarioLogueado(principal);
     String ruta = BASE_PATH + logueado.getEmpresa().getId() + "/";
     new File(ruta).mkdirs();
     
     for (MultipartFile archivo : archivos) {
-        if (archivo.isEmpty()) continue; // Seguridad por si suben un input vacío
+        if (archivo.isEmpty()) {
+            System.out.println("⚠️ Archivo vacío recibido, saltando...");
+            continue;
+        }
+        
+        System.out.println("Processing archivo: " + archivo.getOriginalFilename());
         
         try {
-            // 1. LEER PRIMERO EL XML DESDE MEMORIA (Antes de transferirlo al disco)
+            // 1. LEER EL XML DESDE EL INPUT STREAM EN MEMORIA
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(true);
-            
             org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(archivo.getInputStream());
             
             Factura f = new Factura();
             org.w3c.dom.Element comp = (org.w3c.dom.Element) doc.getElementsByTagNameNS("*", "Comprobante").item(0);
             
             if (comp != null) {
-                f.setTotal(Double.parseDouble(comp.getAttribute("Total")));
-                f.setFecha(LocalDate.parse(comp.getAttribute("Fecha").substring(0, 10)));
+                // --- PARSEO SEGURO DE TOTAL ---
+                try {
+                    f.setTotal(Double.parseDouble(comp.getAttribute("Total")));
+                    System.out.println(" Total parseado: " + f.getTotal());
+                } catch (Exception e) {
+                    System.out.println("❌ Error parseando el Total: " + comp.getAttribute("Total"));
+                    f.setTotal(0.0);
+                }
+
+                // --- PARSEO SEGURO DE FECHA ---
+                try {
+                    String fechaStr = comp.getAttribute("Fecha");
+                    System.out.println(" Atributo Fecha original: " + fechaStr);
+                    if (fechaStr != null && fechaStr.length() >= 10) {
+                        f.setFecha(LocalDate.parse(fechaStr.substring(0, 10)));
+                    } else {
+                        f.setFecha(LocalDate.now());
+                    }
+                    System.out.println(" Fecha mapeada: " + f.getFecha());
+                } catch (Exception e) {
+                    System.out.println("❌ Error parseando Fecha, usando fecha actual.");
+                    f.setFecha(LocalDate.now());
+                }
                 
-                // Detectar tipo de comprobante (E = EGRESO, cualquier otro suele ser INGRESO)
+                // --- DETECTAR TIPO DE COMPROBANTE ---
                 String tipoComprobante = comp.getAttribute("TipoDeComprobante");
+                System.out.println(" Atributo TipoDeComprobante original: " + tipoComprobante);
                 f.setTipo("E".equalsIgnoreCase(tipoComprobante) ? "EGRESO" : "INGRESO");
+                System.out.println(" Tipo asignado al objeto Factura: " + f.getTipo());
                 
-                // Extraer los montos base para cálculos del módulo de Impuestos
-                double subtotal = comp.getAttribute("SubTotal") != null && !comp.getAttribute("SubTotal").isEmpty()
-                        ? Double.parseDouble(comp.getAttribute("SubTotal")) 
-                        : f.getTotal();
+                // --- PARSEO SEGURO DE SUBTOTAL ---
+                double subtotal = f.getTotal();
+                try {
+                    String subStr = comp.getAttribute("SubTotal");
+                    if (subStr != null && !subStr.isEmpty()) {
+                        subtotal = Double.parseDouble(subStr);
+                    }
+                } catch (Exception e) {
+                    System.out.println("❌ Error parseando SubTotal, usando valor del Total.");
+                }
                 f.setSubtotal(subtotal);
                 
-                // Extraer o calcular el IVA trasladado/acreditable
+                // --- EXTRAER O CALCULAR IVA ---
                 org.w3c.dom.NodeList impuestosNode = doc.getElementsByTagNameNS("*", "Impuestos");
                 double totalIva = 0.0;
                 if (impuestosNode.getLength() > 0) {
                     org.w3c.dom.Element impElem = (org.w3c.dom.Element) impuestosNode.item(0);
                     String totalImpTras = impElem.getAttribute("TotalImpuestosTrasladados");
                     if (totalImpTras != null && !totalImpTras.isEmpty()) {
-                        totalIva = Double.parseDouble(totalImpTras);
+                        try {
+                            totalIva = Double.parseDouble(totalImpTras);
+                        } catch (Exception e) {
+                            System.out.println("❌ Error parseando TotalImpuestosTrasladados.");
+                        }
                     }
                 }
-                
-                // Si el XML no trae el atributo explícito, hacemos un cálculo rápido inverso estándar
                 if (totalIva == 0.0 && f.getTotal() > subtotal) {
                     totalIva = f.getTotal() - subtotal;
                 }
                 f.setIva(totalIva);
                 
-                // LÓGICA DE ASIGNACIÓN: Cliente (Receptor) o Proveedor (Emisor)
+                // --- ASIGNACIÓN DE RFC CLIENTE O PROVEEDOR ---
                 if ("EGRESO".equals(f.getTipo())) {
-                    // Si tú gastaste (Egreso), el Receptor eres tú. Necesitamos guardar al EMISOR (tu proveedor)
                     org.w3c.dom.NodeList emisor = doc.getElementsByTagNameNS("*", "Emisor");
                     if (emisor.getLength() > 0) {
                         org.w3c.dom.Element emiElem = (org.w3c.dom.Element) emisor.item(0);
                         String proveedor = emiElem.getAttribute("Nombre");
                         if (proveedor == null || proveedor.trim().isEmpty()) {
-                            proveedor = emiElem.getAttribute("Rfc"); // Respaldo por si no viene la razón social
+                            proveedor = emiElem.getAttribute("Rfc");
                         }
                         f.setRfcCliente(proveedor);
                     }
                 } else {
-                    // Si tú vendiste (Ingreso), guardamos el RECEPTOR (tu cliente)
                     org.w3c.dom.NodeList receptor = doc.getElementsByTagNameNS("*", "Receptor");
                     if (receptor.getLength() > 0) {
                         org.w3c.dom.Element recElem = (org.w3c.dom.Element) receptor.item(0);
@@ -642,23 +676,33 @@ public String subir(Principal principal, @RequestParam("archivo") MultipartFile[
                 f.setNombreArchivo(archivo.getOriginalFilename());
                 f.setEmpresa(logueado.getEmpresa());
                 
-                // 2. AHORA SÍ, GUARDAMOS EL ARCHIVO FÍSICO EN DISCO
-                archivo.transferTo(Paths.get(ruta + archivo.getOriginalFilename()));
+                // 2. TRANSFERIR ARCHIVO FÍSICO A DISCO
+                File destino = new File(ruta + archivo.getOriginalFilename());
+                archivo.transferTo(destino);
+                System.out.println(" Archivo guardado físicamente en: " + destino.getAbsolutePath());
                 
-                // 3. GUARDAMOS EN BASE DE DATOS Y BITÁCORA
+                // 3. GUARDAR EN REPOSITORIO DE DATOS
+                System.out.println(" Guardando objeto Factura en SQL Server...");
                 facturaRepository.save(f);
+                System.out.println(" ¡Factura guardada con éxito ID: " + f.getId() + "!");
 
+                // 4. REGISTRO EN BITÁCORA
                 String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
                 String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename() 
                                 + "' vinculando una factura de tipo " + f.getTipo() + " por $" + String.format("%.2f", f.getTotal());
                 Auditoria registro = new Auditoria(usuarioActivo, "CARGAR XML", detalles, logueado.getEmpresa());
                 auditoriaRepository.save(registro);
+                System.out.println(" Bitácora de auditoría registrada.");
+            } else {
+                System.out.println("❌ No se encontró el nodo principal <cfdi:Comprobante> en el XML.");
             }
+            
         } catch (Exception e) { 
-            System.err.println("Error procesando el archivo XML: " + archivo.getOriginalFilename());
+            System.out.println("❌ ERROR CRÍTICO PROCESANDO EL ARCHIVO XML CONTROLLER:");
             e.printStackTrace(); 
         }
     }
+    System.out.println("====== FIN DEL PROCESAMIENTO, REDIRIGIENDO AL HOME ======");
     return "redirect:/";
 }
 
