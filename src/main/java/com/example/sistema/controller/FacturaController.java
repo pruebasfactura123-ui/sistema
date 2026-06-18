@@ -548,46 +548,92 @@ public class FacturaController {
         } catch (Exception e) { return "redirect:/perfil?error"; }
     }
 
-    @PostMapping("/subir")
-    public String subir(Principal principal, @RequestParam("archivo") MultipartFile[] archivos) {
-        Usuario logueado = getUsuarioLogueado(principal);
-        String ruta = BASE_PATH + logueado.getEmpresa().getId() + "/";
-        new File(ruta).mkdirs();
-        for (MultipartFile archivo : archivos) {
-            try {
-                archivo.transferTo(Paths.get(ruta + archivo.getOriginalFilename()));
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                factory.setNamespaceAware(true);
+   @PostMapping("/subir")
+public String subir(Principal principal, @RequestParam("archivo") MultipartFile[] archivos) {
+    Usuario logueado = getUsuarioLogueado(principal);
+    String ruta = BASE_PATH + logueado.getEmpresa().getId() + "/";
+    new File(ruta).mkdirs();
+    
+    for (MultipartFile archivo : archivos) {
+        try {
+            archivo.transferTo(Paths.get(ruta + archivo.getOriginalFilename()));
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            
+            org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(archivo.getInputStream());
+            
+            Factura f = new Factura();
+            org.w3c.dom.Element comp = (org.w3c.dom.Element) doc.getElementsByTagNameNS("*", "Comprobante").item(0);
+            
+            if (comp != null) {
+                f.setTotal(Double.parseDouble(comp.getAttribute("Total")));
+                f.setFecha(LocalDate.parse(comp.getAttribute("Fecha").substring(0, 10)));
                 
-                org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(archivo.getInputStream());
+                // 1. Detectar tipo de comprobante (E = EGRESO, cualquier otro suele ser INGRESO)
+                String tipoComprobante = comp.getAttribute("TipoDeComprobante");
+                f.setTipo("E".equals(tipoComprobante) ? "EGRESO" : "INGRESO");
                 
-                Factura f = new Factura();
-                org.w3c.dom.Element comp = (org.w3c.dom.Element) doc.getElementsByTagNameNS("*", "Comprobante").item(0);
-                if (comp != null) {
-                    f.setTotal(Double.parseDouble(comp.getAttribute("Total")));
-                    f.setFecha(LocalDate.parse(comp.getAttribute("Fecha").substring(0, 10)));
-                    f.setTipo("E".equals(comp.getAttribute("TipoDeComprobante")) ? "EGRESO" : "INGRESO");
-                    
+                // 2. Extraer los montos base para cálculos del módulo de Impuestos
+                double subtotal = comp.getAttribute("SubTotal") != null ? Double.parseDouble(comp.getAttribute("SubTotal")) : f.getTotal();
+                f.setSubtotal(subtotal);
+                
+                // Extraer o calcular el IVA trasladado/acreditable
+                org.w3c.dom.NodeList impuestosNode = doc.getElementsByTagNameNS("*", "Impuestos");
+                double totalIva = 0.0;
+                if (impuestosNode.getLength() > 0) {
+                    org.w3c.dom.Element impElem = (org.w3c.dom.Element) impuestosNode.item(0);
+                    String totalImpTras = impElem.getAttribute("TotalImpuestosTrasladados");
+                    if (totalImpTras != null && !totalImpTras.isEmpty()) {
+                        totalIva = Double.parseDouble(totalImpTras);
+                    }
+                }
+                // Si el XML no trae el atributo explícito, hacemos un cálculo rápido inverso estándar
+                if (totalIva == 0.0 && f.getTotal() > subtotal) {
+                    totalIva = f.getTotal() - subtotal;
+                }
+                f.setIva(totalIva);
+                
+                // 3. LÓGICA DE ASIGNACIÓN: Cliente (Receptor) o Proveedor (Emisor)
+                if ("EGRESO".equals(f.getTipo())) {
+                    // Si tú gastaste (Egreso), el Receptor eres tú. Necesitamos guardar al EMISOR (tu proveedor)
+                    org.w3c.dom.NodeList emisor = doc.getElementsByTagNameNS("*", "Emisor");
+                    if (emisor.getLength() > 0) {
+                        org.w3c.dom.Element emiElem = (org.w3c.dom.Element) emisor.item(0);
+                        String proveedor = emiElem.getAttribute("Nombre");
+                        if (proveedor == null || proveedor.trim().isEmpty()) {
+                            proveedor = emiElem.getAttribute("Rfc"); // Respaldo por si no viene la razón social
+                        }
+                        f.setRfcCliente(proveedor);
+                    }
+                } else {
+                    // Si tú vendiste (Ingreso), guardamos el RECEPTOR (tu cliente)
                     org.w3c.dom.NodeList receptor = doc.getElementsByTagNameNS("*", "Receptor");
                     if (receptor.getLength() > 0) {
                         org.w3c.dom.Element recElem = (org.w3c.dom.Element) receptor.item(0);
-                        f.setRfcCliente(recElem.getAttribute("Nombre"));
+                        String cliente = recElem.getAttribute("Nombre");
+                        if (cliente == null || cliente.trim().isEmpty()) {
+                            cliente = recElem.getAttribute("Rfc");
+                        }
+                        f.setRfcCliente(cliente);
                     }
-                    
-                    f.setNombreArchivo(archivo.getOriginalFilename());
-                    f.setEmpresa(logueado.getEmpresa());
-                    facturaRepository.save(f);
-
-                    String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-                    String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename() 
-                                    + "' vinculando una factura de tipo " + f.getTipo() + " por $" + String.format("%.2f", f.getTotal());
-                    Auditoria registro = new Auditoria(usuarioActivo, "CARGAR XML", detalles, logueado.getEmpresa());
-                    auditoriaRepository.save(registro);
                 }
-            } catch (Exception e) { e.printStackTrace(); }
+                
+                f.setNombreArchivo(archivo.getOriginalFilename());
+                f.setEmpresa(logueado.getEmpresa());
+                facturaRepository.save(f);
+
+                String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
+                String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename() 
+                                + "' vinculando una factura de tipo " + f.getTipo() + " por $" + String.format("%.2f", f.getTotal());
+                Auditoria registro = new Auditoria(usuarioActivo, "CARGAR XML", detalles, logueado.getEmpresa());
+                auditoriaRepository.save(registro);
+            }
+        } catch (Exception e) { 
+            e.printStackTrace(); 
         }
-        return "redirect:/";
     }
+    return "redirect:/";
+}
 
     @GetMapping("/descargar/{identificador}")
     @ResponseBody
