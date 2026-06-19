@@ -106,87 +106,88 @@ public class FacturaController {
     }
 
     // =========================================================================
-// 1. DASHBOARD PRINCIPAL (Muestra Ingresos y Egresos de XML subidos)
-// =========================================================================
-@GetMapping("/")
-public String inicio(Principal principal, 
-                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio, 
-                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin, 
-                     @RequestParam(required = false) String errorPermisoFactura,
-                     Model model) {
-    try {
-        Usuario logueado = getUsuarioLogueado(principal);
-        Long idEmpresa = logueado.getEmpresa().getId();
-        
-        // Carga limpia desde repositorio
-        List<Factura> todasLasFacturas = (fechaInicio != null && fechaFin != null) 
-                ? facturaRepository.findByEmpresaIdAndFechaBetween(idEmpresa, fechaInicio, fechaFin) 
-                : facturaRepository.findByEmpresaId(idEmpresa);
-                
-        if (todasLasFacturas == null) todasLasFacturas = new ArrayList<>();
-        
-        // Filtro seguro para archivos XML
-        List<Factura> comprobantesXml = todasLasFacturas.stream()
-                .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().trim().toLowerCase().startsWith("manual_"))
-                .collect(Collectors.toList());
-        
-        // Sumatorias limpias ignorando mayúsculas/minúsculas o espacios
-        double ingresos = comprobantesXml.stream()
-                .filter(f -> f.getTipo() != null && "INGRESO".equalsIgnoreCase(f.getTipo().trim()))
-                .mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
-                
-        double egresos = comprobantesXml.stream()
-                .filter(f -> f.getTipo() != null && "EGRESO".equalsIgnoreCase(f.getTipo().trim()))
-                .mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
-        
-        double[] ingresosMeses = new double[12];
-        double[] egresosMeses = new double[12];
+    // 1. DASHBOARD PRINCIPAL (Muestra Ingresos y Egresos de XML subidos)
+    // =========================================================================
+    @GetMapping("/")
+    public String inicio(Principal principal, 
+                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio, 
+                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin, 
+                         @RequestParam(required = false) String errorPermisoFactura,
+                         Model model) {
+        try {
+            Usuario logueado = getUsuarioLogueado(principal);
+            Long idEmpresa = logueado.getEmpresa().getId();
+            
+            // Carga limpia desde repositorio
+            List<Factura> todasLasFacturas = (fechaInicio != null && fechaFin != null) 
+                    ? facturaRepository.findByEmpresaIdAndFechaBetween(idEmpresa, fechaInicio, fechaFin) 
+                    : facturaRepository.findByEmpresaId(idEmpresa);
+                    
+            if (todasLasFacturas == null) todasLasFacturas = new ArrayList<>();
+            
+            // Filtro seguro para archivos XML
+            List<Factura> comprobantesXml = todasLasFacturas.stream()
+                    .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().trim().toLowerCase().startsWith("manual_"))
+                    .collect(Collectors.toList());
+            
+            // Sumatorias limpias ignorando mayúsculas/minúsculas o espacios
+            double ingresos = comprobantesXml.stream()
+                    .filter(f -> f.getTipo() != null && "INGRESO".equalsIgnoreCase(f.getTipo().trim()))
+                    .mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
+                    
+            double egresos = comprobantesXml.stream()
+                    .filter(f -> f.getTipo() != null && "EGRESO".equalsIgnoreCase(f.getTipo().trim()))
+                    .mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
+            
+            double[] ingresosMeses = new double[12];
+            double[] egresosMeses = new double[12];
 
-        for (Factura f : comprobantesXml) {
-            if (f.getFecha() != null && f.getTipo() != null) {
-                int mesIndex = f.getFecha().getMonthValue() - 1;
-                String tipoLimpio = f.getTipo().trim();
-                if ("INGRESO".equalsIgnoreCase(tipoLimpio)) {
-                    ingresosMeses[mesIndex] += (f.getTotal() != null ? f.getTotal() : 0.0);
-                } else if ("EGRESO".equalsIgnoreCase(tipoLimpio)) {
-                    egresosMeses[mesIndex] += (f.getTotal() != null ? f.getTotal() : 0.0);
+            for (Factura f : comprobantesXml) {
+                if (f.getFecha() != null && f.getTipo() != null) {
+                    int mesIndex = f.getFecha().getMonthValue() - 1;
+                    String tipoLimpio = f.getTipo().trim();
+                    if ("INGRESO".equalsIgnoreCase(tipoLimpio)) {
+                        ingresosMeses[mesIndex] += (f.getTotal() != null ? f.getTotal() : 0.0);
+                    } else if ("EGRESO".equalsIgnoreCase(tipoLimpio)) {
+                        egresosMeses[mesIndex] += (f.getTotal() != null ? f.getTotal() : 0.0);
+                    }
                 }
             }
-        }
 
-        // Enviar arrays a las gráficas
-        model.addAttribute("datosIngresos", ingresosMeses);
-        model.addAttribute("datosEgresos", egresosMeses);
+            // Enviar arrays a las gráficas
+            model.addAttribute("datosIngresos", ingresosMeses);
+            model.addAttribute("datosEgresos", egresosMeses);
 
-        if (errorPermisoFactura != null) {
-            model.addAttribute("errorPermisoFactura", true);
-        }
+            if (errorPermisoFactura != null) {
+                model.addAttribute("errorPermisoFactura", true);
+            }
 
-        model.addAttribute("usuarioLogueado", logueado);
-        
-        // SOLUCIÓN DOBLE: Seteamos ambos nombres para evitar cualquier desajuste con el index.html
-        model.addAttribute("comprobantes", comprobantesXml); 
-        model.addAttribute("facturas", comprobantesXml); 
-        
-        // Tarjetas superiores del Dashboard
-        model.addAttribute("subtotalTotal", ingresos);
-        model.addAttribute("ivaTrasladado", ingresos * 0.16);
-        model.addAttribute("totalNeto", ingresos - egresos); 
-        model.addAttribute("xmlProcesados", comprobantesXml.size());
-        
-        if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
-            model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-        } else {
-            model.addAttribute("empresaNombre", "OFICINA FISCAL");
+            model.addAttribute("usuarioLogueado", logueado);
+            
+            // SOLUCIÓN DOBLE: Seteamos ambos nombres para evitar cualquier desajuste con el index.html
+            model.addAttribute("comprobantes", comprobantesXml); 
+            model.addAttribute("facturas", comprobantesXml); 
+            
+            // Tarjetas superiores del Dashboard
+            model.addAttribute("subtotalTotal", ingresos);
+            model.addAttribute("ivaTrasladado", ingresos * 0.16);
+            model.addAttribute("totalNeto", ingresos - egresos); 
+            model.addAttribute("xmlProcesados", comprobantesXml.size());
+            
+            if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
+                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+            } else {
+                model.addAttribute("empresaNombre", "OFICINA FISCAL");
+            }
+            
+        } catch (Exception e) { 
+            e.printStackTrace();
+            model.addAttribute("comprobantes", new ArrayList<>()); 
+            model.addAttribute("facturas", new ArrayList<>()); 
         }
-        
-    } catch (Exception e) { 
-        e.printStackTrace();
-        model.addAttribute("comprobantes", new ArrayList<>()); 
-        model.addAttribute("facturas", new ArrayList<>()); 
+        return "index";
     }
-    return "index";
-}
+
     @GetMapping("/facturas/nueva")
     public String nuevaFactura(Principal principal, Model model) {
         try {
@@ -445,7 +446,7 @@ public String inicio(Principal principal,
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
                             + " con RFC: " + nuevoCliente.getRfc();
-                                
+                                 
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
@@ -564,147 +565,149 @@ public String inicio(Principal principal,
             return "redirect:/perfil?exito";
         } catch (Exception e) { return "redirect:/perfil?error"; }
     }
-@PostMapping("/subir")
-public String subir(Principal principal, @RequestParam("archivo") MultipartFile[] archivos) {
-    System.out.println("====== INICIANDO PROCESAMIENTO DE ARCHIVOS ======");
-    Usuario logueado = getUsuarioLogueado(principal);
-    String ruta = BASE_PATH + logueado.getEmpresa().getId() + "/";
-    new File(ruta).mkdirs();
-    
-    for (MultipartFile archivo : archivos) {
-        if (archivo.isEmpty()) {
-            System.out.println("⚠️ Archivo vacío recibido, saltando...");
-            continue;
-        }
-        
-        System.out.println("Processing archivo: " + archivo.getOriginalFilename());
-        
-        try {
-            // 1. LEER EL XML DESDE EL INPUT STREAM EN MEMORIA
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setNamespaceAware(true);
-            org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(archivo.getInputStream());
-            
-            Factura f = new Factura();
-            org.w3c.dom.Element comp = (org.w3c.dom.Element) doc.getElementsByTagNameNS("*", "Comprobante").item(0);
-            
-            if (comp != null) {
-                // --- PARSEO SEGURO DE TOTAL ---
-                try {
-                    f.setTotal(Double.parseDouble(comp.getAttribute("Total")));
-                    System.out.println(" Total parseado: " + f.getTotal());
-                } catch (Exception e) {
-                    System.out.println("❌ Error parseando el Total: " + comp.getAttribute("Total"));
-                    f.setTotal(0.0);
-                }
 
-                // --- PARSEO SEGURO DE FECHA ---
-                try {
-                    String fechaStr = comp.getAttribute("Fecha");
-                    System.out.println(" Atributo Fecha original: " + fechaStr);
-                    if (fechaStr != null && fechaStr.length() >= 10) {
-                        f.setFecha(LocalDate.parse(fechaStr.substring(0, 10)));
-                    } else {
-                        f.setFecha(LocalDate.now());
-                    }
-                    System.out.println(" Fecha mapeada: " + f.getFecha());
-                } catch (Exception e) {
-                    System.out.println("❌ Error parseando Fecha, usando fecha actual.");
-                    f.setFecha(LocalDate.now());
-                }
-                
-                // --- DETECTAR TIPO DE COMPROBANTE ---
-                String tipoComprobante = comp.getAttribute("TipoDeComprobante");
-                System.out.println(" Atributo TipoDeComprobante original: " + tipoComprobante);
-                f.setTipo("E".equalsIgnoreCase(tipoComprobante) ? "EGRESO" : "INGRESO");
-                System.out.println(" Tipo asignado al objeto Factura: " + f.getTipo());
-                
-                // --- PARSEO SEGURO DE SUBTOTAL ---
-                double subtotal = f.getTotal();
-                try {
-                    String subStr = comp.getAttribute("SubTotal");
-                    if (subStr != null && !subStr.isEmpty()) {
-                        subtotal = Double.parseDouble(subStr);
-                    }
-                } catch (Exception e) {
-                    System.out.println("❌ Error parseando SubTotal, usando valor del Total.");
-                }
-                f.setSubtotal(subtotal);
-                
-                // --- EXTRAER O CALCULAR IVA ---
-                org.w3c.dom.NodeList impuestosNode = doc.getElementsByTagNameNS("*", "Impuestos");
-                double totalIva = 0.0;
-                if (impuestosNode.getLength() > 0) {
-                    org.w3c.dom.Element impElem = (org.w3c.dom.Element) impuestosNode.item(0);
-                    String totalImpTras = impElem.getAttribute("TotalImpuestosTrasladados");
-                    if (totalImpTras != null && !totalImpTras.isEmpty()) {
-                        try {
-                            totalIva = Double.parseDouble(totalImpTras);
-                        } catch (Exception e) {
-                            System.out.println("❌ Error parseando TotalImpuestosTrasladados.");
-                        }
-                    }
-                }
-                if (totalIva == 0.0 && f.getTotal() > subtotal) {
-                    totalIva = f.getTotal() - subtotal;
-                }
-                f.setIva(totalIva);
-                
-                // --- ASIGNACIÓN DE RFC CLIENTE O PROVEEDOR ---
-                if ("EGRESO".equals(f.getTipo())) {
-                    org.w3c.dom.NodeList emisor = doc.getElementsByTagNameNS("*", "Emisor");
-                    if (emisor.getLength() > 0) {
-                        org.w3c.dom.Element emiElem = (org.w3c.dom.Element) emisor.item(0);
-                        String proveedor = emiElem.getAttribute("Nombre");
-                        if (proveedor == null || proveedor.trim().isEmpty()) {
-                            proveedor = emiElem.getAttribute("Rfc");
-                        }
-                        f.setRfcCliente(proveedor);
-                    }
-                } else {
-                    org.w3c.dom.NodeList receptor = doc.getElementsByTagNameNS("*", "Receptor");
-                    if (receptor.getLength() > 0) {
-                        org.w3c.dom.Element recElem = (org.w3c.dom.Element) receptor.item(0);
-                        String cliente = recElem.getAttribute("Nombre");
-                        if (cliente == null || cliente.trim().isEmpty()) {
-                            cliente = recElem.getAttribute("Rfc");
-                        }
-                        f.setRfcCliente(cliente);
-                    }
-                }
-                
-                f.setNombreArchivo(archivo.getOriginalFilename());
-                f.setEmpresa(logueado.getEmpresa());
-                
-                // 2. TRANSFERIR ARCHIVO FÍSICO A DISCO
-                File destino = new File(ruta + archivo.getOriginalFilename());
-                archivo.transferTo(destino);
-                System.out.println(" Archivo guardado físicamente en: " + destino.getAbsolutePath());
-                
-                // 3. GUARDAR EN REPOSITORIO DE DATOS
-                System.out.println(" Guardando objeto Factura en SQL Server...");
-                facturaRepository.save(f);
-                System.out.println(" ¡Factura guardada con éxito ID: " + f.getId() + "!");
-
-                // 4. REGISTRO EN BITÁCORA
-                String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-                String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename() 
-                                + "' vinculando una factura de tipo " + f.getTipo() + " por $" + String.format("%.2f", f.getTotal());
-                Auditoria registro = new Auditoria(usuarioActivo, "CARGAR XML", detalles, logueado.getEmpresa());
-                auditoriaRepository.save(registro);
-                System.out.println(" Bitácora de auditoría registrada.");
-            } else {
-                System.out.println("❌ No se encontró el nodo principal <cfdi:Comprobante> en el XML.");
+    @PostMapping("/subir")
+    public String subir(Principal principal, @RequestParam("archivo") MultipartFile[] archivos) {
+        System.out.println("====== INICIANDO PROCESAMIENTO DE ARCHIVOS ======");
+        Usuario logueado = getUsuarioLogueado(principal);
+        String ruta = BASE_PATH + logueado.getEmpresa().getId() + "/";
+        new File(ruta).mkdirs();
+        
+        for (MultipartFile archivo : archivos) {
+            if (archivo.isEmpty()) {
+                System.out.println("⚠️ Archivo vacío recibido, saltando...");
+                continue;
             }
             
-        } catch (Exception e) { 
-            System.out.println("❌ ERROR CRÍTICO PROCESANDO EL ARCHIVO XML CONTROLLER:");
-            e.printStackTrace(); 
+            System.out.println("Processing archivo: " + archivo.getOriginalFilename());
+            
+            try {
+                // 1. LEER EL XML DESDE EL INPUT STREAM EN MEMORIA
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                factory.setNamespaceAware(true);
+                org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(archivo.getInputStream());
+                
+                Factura f = new Factura();
+                org.w3c.dom.Element comp = (org.w3c.dom.Element) doc.getElementsByTagNameNS("*", "Comprobante").item(0);
+                
+                if (comp != null) {
+                    // --- PARSEO SEGURO DE TOTAL ---
+                    try {
+                        f.setTotal(Double.parseDouble(comp.getAttribute("Total")));
+                        System.out.println(" Total parseado: " + f.getTotal());
+                    } catch (Exception e) {
+                        System.out.println("❌ Error parseando el Total: " + comp.getAttribute("Total"));
+                        f.setTotal(0.0);
+                    }
+
+                    // --- PARSEO SEGURO DE FECHA ---
+                    try {
+                        String fechaStr = comp.getAttribute("Fecha");
+                        System.out.println(" Atributo Fecha original: " + fechaStr);
+                        if (fechaStr != null && fechaStr.length() >= 10) {
+                            f.setFecha(LocalDate.parse(fechaStr.substring(0, 10)));
+                        } else {
+                            f.setFecha(LocalDate.now());
+                        }
+                        System.out.println(" Fecha mapeada: " + f.getFecha());
+                    } catch (Exception e) {
+                        System.out.println("❌ Error parseando Fecha, usando fecha actual.");
+                        f.setFecha(LocalDate.now());
+                    }
+                    
+                    // --- DETECTAR TIPO DE COMPROBANTE ---
+                    String tipoComprobante = comp.getAttribute("TipoDeComprobante");
+                    System.out.println(" Atributo TipoDeComprobante original: " + tipoComprobante);
+                    f.setTipo("E".equalsIgnoreCase(tipoComprobante) ? "EGRESO" : "INGRESO");
+                    System.out.println(" Tipo asignado al objeto Factura: " + f.getTipo());
+                    
+                    // --- PARSEO SEGURO DE SUBTOTAL ---
+                    double subtotal = f.getTotal();
+                    try {
+                        String subStr = comp.getAttribute("SubTotal");
+                        if (subStr != null && !subStr.isEmpty()) {
+                            subtotal = Double.parseDouble(subStr);
+                        }
+                    } catch (Exception e) {
+                        System.out.println("❌ Error parseando SubTotal, usando valor del Total.");
+                    }
+                    f.setSubtotal(subtotal);
+                    
+                    // --- EXTRAER O CALCULAR IVA ---
+                    org.w3c.dom.NodeList impuestosNode = doc.getElementsByTagNameNS("*", "Impuestos");
+                    double totalIva = 0.0;
+                    if (impuestosNode.getLength() > 0) {
+                        org.w3c.dom.Element impElem = (org.w3c.dom.Element) impuestosNode.item(0);
+                        String totalImpTras = impElem.getAttribute("TotalImpuestosTrasladados");
+                        if (totalImpTras != null && !totalImpTras.isEmpty()) {
+                            try {
+                                totalIva = Double.parseDouble(totalImpTras);
+                            } catch (Exception e) {
+                                System.out.println("❌ Error parseando TotalImpuestosTrasladados.");
+                            }
+                        }
+                    }
+                    
+                    if (totalIva == 0.0 && f.getTotal() > subtotal) {
+                        totalIva = f.getTotal() - subtotal;
+                    }
+                    f.setIva(totalIva);
+                    
+                    // --- ASIGNACIÓN DE RFC CLIENTE O PROVEEDOR ---
+                    if ("EGRESO".equals(f.getTipo())) {
+                        org.w3c.dom.NodeList emisor = doc.getElementsByTagNameNS("*", "Emisor");
+                        if (emisor.getLength() > 0) {
+                            org.w3c.dom.Element emiElem = (org.w3c.dom.Element) emisor.item(0);
+                            String proveedor = emiElem.getAttribute("Nombre");
+                            if (proveedor == null || proveedor.trim().isEmpty()) {
+                                proveedor = emiElem.getAttribute("Rfc");
+                            }
+                            f.setRfcCliente(proveedor);
+                        }
+                    } else {
+                        org.w3c.dom.NodeList receptor = doc.getElementsByTagNameNS("*", "Receptor");
+                        if (receptor.getLength() > 0) {
+                            org.w3c.dom.Element recElem = (org.w3c.dom.Element) receptor.item(0);
+                            String cliente = recElem.getAttribute("Nombre");
+                            if (cliente == null || cliente.trim().isEmpty()) {
+                                cliente = recElem.getAttribute("Rfc");
+                            }
+                            f.setRfcCliente(cliente);
+                        }
+                    }
+                    
+                    f.setNombreArchivo(archivo.getOriginalFilename());
+                    f.setEmpresa(logueado.getEmpresa());
+                    
+                    // 2. TRANSFERIR ARCHIVO FÍSICO A DISCO
+                    File destino = new File(ruta + archivo.getOriginalFilename());
+                    archivo.transferTo(destino);
+                    System.out.println(" Archivo guardado físicamente en: " + destino.getAbsolutePath());
+                    
+                    // 3. GUARDAR EN REPOSITORIO DE DATOS
+                    System.out.println(" Guardando objeto Factura en SQL Server...");
+                    facturaRepository.save(f);
+                    System.out.println(" ¡Factura guardada con éxito ID: " + f.getId() + "!");
+
+                    // 4. REGISTRO EN BITÁCORA
+                    String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
+                    String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename() 
+                                    + "' vinculando una factura de tipo " + f.getTipo() + " por $" + String.format("%.2f", f.getTotal());
+                    Auditoria registro = new Auditoria(usuarioActivo, "CARGAR XML", detalles, logueado.getEmpresa());
+                    auditoriaRepository.save(registro);
+                    System.out.println(" Bitácora de auditoría registrada.");
+                } else {
+                    System.out.println("❌ No se encontró el nodo principal <cfdi:Comprobante> en el XML.");
+                }
+                
+            } catch (Exception e) { 
+                System.out.println("❌ ERROR CRÍTICO PROCESANDO EL ARCHIVO XML CONTROLLER:");
+                e.printStackTrace(); 
+            }
         }
+        System.out.println("====== FIN DEL PROCESAMIENTO, REDIRIGIENDO AL HOME ======");
+        return "redirect:/";
     }
-    System.out.println("====== FIN DEL PROCESAMIENTO, REDIRIGIENDO AL HOME ======");
-    return "redirect:/";
-}
 
     @GetMapping("/descargar/{identificador}")
     @ResponseBody
