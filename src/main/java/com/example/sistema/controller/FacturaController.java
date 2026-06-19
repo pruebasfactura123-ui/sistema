@@ -399,7 +399,7 @@ public class FacturaController {
     }
 
     // =========================================================================
-    // 2. HISTORIAL UNIFICADO DE FACTURAS MANUALES (Se eliminó la duplicidad de la ruta)
+    // 2. HISTORIAL UNIFICADO DE FACTURAS MANUALES 
     // =========================================================================
     @GetMapping("/facturas/historial")
     public String historialFacturas(Principal principal, Model model) {
@@ -407,7 +407,6 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
             
-            // Usamos el método nativo por empresa directamente
             List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
             List<Factura> facturasManuales = todas.stream()
                     .filter(f -> f.getNombreArchivo() != null && f.getNombreArchivo().startsWith("manual_"))
@@ -446,7 +445,7 @@ public class FacturaController {
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
                             + " con RFC: " + nuevoCliente.getRfc();
-                                 
+                                                 
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
@@ -938,8 +937,7 @@ public class FacturaController {
             List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
             if (todas == null) todas = new ArrayList<>();
             
-            // FILTRO FISCAL CORREGIDO: Mantiene la exclusión de las manuales si así lo requiere tu lógica,
-            // pero procesa los XML válidos de Ingreso y Egreso sin peligro de pérdidas por strings vacíos.
+            // FILTRO FISCAL CORREGIDO
             List<Factura> comprobantesXml = todas.stream()
                     .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().startsWith("manual_"))
                     .collect(Collectors.toList());
