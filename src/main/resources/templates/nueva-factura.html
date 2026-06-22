@@ -37,13 +37,22 @@
         <h4 th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</h4>
         <nav class="nav flex-column flex-grow-1">
             <a th:href="@{/}" class="nav-link"><i class="fas fa-chart-pie"></i> Inicio</a>
+            
             <p class="text-uppercase fw-bold mb-1 mt-3" style="font-size: 0.6rem; color: #64748b; padding-left: 12px;">Operaciones</p>
-            <a th:href="@{/facturas/nueva}" class="nav-link active"><i class="fas fa-file-invoice-dollar"></i> Crear Factura</a>
+            
+            <a th:href="@{/facturas/nueva}" class="nav-link active"><i class="fas fa-file-invoice"></i> Crear Factura</a>
             <a th:href="@{/facturas/historial}" class="nav-link"><i class="fas fa-history"></i> Historial Facturas</a>
+            
+            <a th:href="@{/impuestos}" class="nav-link"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
+            <a th:href="@{/operaciones/declaraciones}" class="nav-link"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
+            <a th:href="@{/operaciones/nominas}" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Nóminas / Sueldos</a>
             
             <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')">
                 <p class="text-uppercase fw-bold mb-1 mt-3" style="font-size: 0.6rem; color: #64748b; padding-left: 12px;">Administración</p>
                 <a th:href="@{/usuarios}" class="nav-link"><i class="fas fa-users"></i> Trabajadores</a>
+                <a th:href="@{/clientes}" class="nav-link"><i class="fas fa-handshake"></i> Clientes</a>
+                <a th:href="@{/empresa}" class="nav-link"><i class="fas fa-building"></i> Mi Empresa</a>
+                <a th:href="@{/operaciones/auditoria}" class="nav-link"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
             </div>
         </nav>
         <div class="mt-auto border-top pt-2 border-secondary">
@@ -240,12 +249,12 @@
                 return;
             }
 
-            const importe = cantidad * precioUnitario;
+            const importeCalculado = cantidad * precioUnitario;
             conceptos.push({ 
                 descripcion: descripcion, 
                 cantidad: cantidad, 
                 precioUnitario: precioUnitario, 
-                importe: importe 
+                importe: importeCalculado 
             });
 
             actualizarTabla();
@@ -353,13 +362,10 @@
                 if (data.status === 'success' || data.uuid) {
                     alert('¡CFDI Certificado con éxito por el SAT!\nUUID: ' + data.uuid);
                     
-                    // Prioridad absoluta al ID numérico local o al UUID limpio
                     const idFactura = data.id ? data.id : data.uuid;
                     
-                    // Lanzamos la descarga del PDF en la misma pestaña activa
                     window.location.href = '/descargar-pdf/' + idFactura;
                     
-                    // Espera corta y redirección automática al historial
                     setTimeout(() => {
                         window.location.href = '/facturas/historial';
                     }, 1500);
