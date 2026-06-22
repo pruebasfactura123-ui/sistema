@@ -61,7 +61,10 @@
                 <a th:href="@{/operaciones/auditoria}" class="nav-link"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
             </div>
         </nav>
-        
+         <div style="line-height: 1.1;">
+                    <div class="fw-bold text-white" style="font-size: 0.7rem;" sec:authentication="name">Usuario</div>
+                    <div class="text-muted" style="font-size: 0.55rem;">CONECTADO</div>
+        </div>
         <div class="mt-auto border-top pt-3 border-secondary" style="border-color: rgba(255,255,255,0.08) !important;">
             <a th:href="@{/perfil}" class="nav-link mb-2"><i class="fas fa-user-circle"></i> Mi Perfil</a>
             <form th:action="@{/logout}" method="post">
