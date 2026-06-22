@@ -445,7 +445,7 @@ public class FacturaController {
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
                             + " con RFC: " + nuevoCliente.getRfc();
-                                                 
+                                                                 
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
@@ -714,15 +714,26 @@ public class FacturaController {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             String rutaCarpeta = BASE_PATH + logueado.getEmpresa().getId() + "/";
-            String nombreArchivo = "factura_" + identificador + ".xml";
+            
+            // CORRECCIÓN: Buscamos dinámicamente si corresponde a un ID o a un UUID de factura manual
+            String nombreArchivo = identificador.contains("-") ? "manual_" + identificador + ".xml" : "factura_" + identificador + ".xml";
+
+            if (identificador.matches("^\\d+$")) {
+                Optional<Factura> fOpt = facturaRepository.findById(Long.parseLong(identificador));
+                if (fOpt.isPresent() && fOpt.get().getNombreArchivo() != null) {
+                    nombreArchivo = fOpt.get().getNombreArchivo();
+                }
+            }
 
             File carpeta = new File(rutaCarpeta);
             if (!carpeta.exists()) { carpeta.mkdirs(); }
 
             Path path = Paths.get(rutaCarpeta + nombreArchivo);
 
-            String xmlFalso = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<cfdi:Comprobante version=\"4.0\" mensaje=\"Simulacion local Sandbox\"/>";
-            Files.write(path, Collections.singletonList(xmlFalso));
+            if (!Files.exists(path)) {
+                String xmlFalso = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<cfdi:Comprobante version=\"4.0\" mensaje=\"Simulacion local Sandbox\"/>";
+                Files.write(path, Collections.singletonList(xmlFalso));
+            }
 
             Resource resource = new FileSystemResource(path.toFile());
             return ResponseEntity.ok()
@@ -741,10 +752,8 @@ public class FacturaController {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             String idEmpresaCarpeta = String.valueOf(logueado.getEmpresa().getId());
-            String nombreArchivo = "factura_" + identificador + ".pdf";
-            Path path = Paths.get(BASE_PATH, idEmpresaCarpeta, nombreArchivo);
             
-            Files.createDirectories(path.getParent());
+            String nombreArchivo = identificador.contains("-") ? "manual_" + identificador + ".pdf" : "factura_" + identificador + ".pdf";
             
             String rfcEmisor = logueado.getEmpresa().getRfc();
             String razonSocial = logueado.getEmpresa().getRazonSocial();
@@ -766,9 +775,15 @@ public class FacturaController {
                         iva = f.getIva() != null ? f.getIva() : 0.00;
                         tipo = f.getTipo() != null ? f.getTipo().toUpperCase() : tipo;
                         fecha = f.getFecha() != null ? f.getFecha().toString() : fecha;
+                        if (f.getNombreArchivo() != null) {
+                            nombreArchivo = f.getNombreArchivo().replace(".xml", ".pdf");
+                        }
                     }
                 }
             }
+
+            Path path = Paths.get(BASE_PATH, idEmpresaCarpeta, nombreArchivo);
+            Files.createDirectories(path.getParent());
 
             try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
                 Document document = new Document(PageSize.A4, 45, 45, 45, 45);
