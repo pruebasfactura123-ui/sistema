@@ -2,30 +2,107 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title>Gestión de Nóminas | Sistema Administrativo</title>
+    <title>Gestión de Nóminas | Sistema Contable</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
             --navy: #0f172a; 
             --bg: #f8fafc; 
-            --accent: #3b82f6;
-            --verde-ingreso: #10b981;
-            --rojo-egreso: #f43f5e;
+            --border: #1e293b; 
+            --sidebar-width: 260px;
             --text-muted: #64748b;
         }
-        body { background: var(--bg); font-family: 'DM Sans', sans-serif; display: flex; min-height: 100vh; margin: 0; font-size: 0.75rem; color: #1e293b; }
+        body { 
+            background: var(--bg); 
+            font-family: 'DM Sans', sans-serif; 
+            font-size: 0.75rem; 
+            color: #1e293b; 
+            margin: 0;
+            padding: 0;
+        }
         
-        .sidebar { width: 200px; background: var(--navy); color: #ffffff; padding: 20px; position: fixed; height: 100vh; display: flex; flex-direction: column; box-shadow: 4px 0 10px rgba(0,0,0,0.05); }
-        .sidebar h4 { font-size: 0.9rem; font-weight: 800; margin-bottom: 25px; color: #ffffff; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.5px; }
-        .nav-link { color: #94a3b8; padding: 10px 12px; border-radius: 10px; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; text-decoration: none; transition: all 0.2s ease; }
-        .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.07); color: #ffffff; font-weight: bold; }
+        /* Estilos Core del Sidebar */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--navy); 
+            min-height: 100vh; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 20px 0 0 0; 
+            z-index: 1000;
+        }
+        .sidebar-brand { 
+            padding: 0 24px 20px 24px; 
+            font-size: 0.95rem; 
+            font-weight: bold; 
+            color: white; 
+            border-bottom: 1px solid var(--border);
+            letter-spacing: 0.5px;
+        }
+        .sidebar-header { 
+            padding: 15px 24px 5px 24px; 
+            font-size: 0.55rem; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            color: #64748b; 
+            letter-spacing: 1px;
+        }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-item a { 
+            display: flex; 
+            align-items: center; 
+            padding: 10px 24px; 
+            color: #94a3b8; 
+            text-decoration: none; 
+            font-size: 0.75rem; 
+            transition: all 0.2s ease;
+        }
+        .sidebar-item a i { width: 20px; font-size: 0.85rem; margin-right: 10px; }
+        .sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
+        .sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
         
-        .main-content { margin-left: 200px; width: calc(100% - 200px); padding: 25px; }
-        .card-custom { background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); height: 100%; }
+        /* Sección de Perfil / Footer del Sidebar */
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-user {
+            padding: 15px 24px 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+        .sidebar-user .user-info { color: white; font-weight: 500; font-size: 0.75rem; }
+        .sidebar-user .user-status { font-size: 0.55rem; color: #10b981; display: block; font-weight: bold; }
         
-        .table thead th { background: #f1f5f9; color: var(--text-muted); font-size: 0.65rem; border: none; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; padding: 12px; }
-        .table tbody td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
+        .btn-logout { 
+            color: #ef4444 !important; 
+            font-size: 0.75rem !important; 
+            border-top: 1px solid rgba(255,255,255,0.05);
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        /* Contenedor Principal */
+        .main-content { 
+            margin-left: var(--sidebar-width); 
+            flex-grow: 1; 
+            padding: 30px; 
+        }
+        
+        .card-custom { background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.01); }
+        
+        /* Tablas */
+        .table thead th { background: #f8fafc; color: var(--text-muted); font-size: 0.65rem; border: none; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; padding: 12px; }
+        .table tbody td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
         
         .badge-simulado { background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.6rem; }
         .badge-pagado { background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.6rem; }
@@ -36,147 +113,199 @@
 </head>
 <body>
 
-    <aside class="sidebar">
-        <h4 th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</h4>
-        <nav class="nav flex-column flex-grow-1">
-            <a th:href="@{/}" class="nav-link"><i class="fas fa-chart-pie"></i> Inicio</a>
-            <p class="text-uppercase fw-bold mb-2 mt-3" style="font-size: 0.55rem; color: #64748b; letter-spacing: 1px; padding-left: 12px;">Operaciones</p>
-            <a th:href="@{/facturas/nueva}" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Crear Factura</a>
-            <a th:href="@{/facturas/historial}" class="nav-link"><i class="fas fa-history"></i> Historial Facturas</a>
-            <a th:href="@{/operaciones/impuestos}" class="nav-link"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
-            <a th:href="@{/operaciones/declaraciones}" class="nav-link"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
-            <a th:href="@{/operaciones/nominas}" class="nav-link active"><i class="fas fa-wallet"></i> Nóminas / Sueldos</a>
+    <div class="d-flex">
+        <div class="sidebar">
+            <div class="sidebar-brand">
+                <span th:text="${empresaNombre ?: 'Sistema Contable'}">Sistema Contable</span>
+            </div>
             
-            <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')" class="mt-3">
-                <p class="text-uppercase fw-bold mb-2" style="font-size: 0.55rem; color: #64748b; letter-spacing: 1px; padding-left: 12px;">Administración</p>
-                <a th:href="@{/usuarios}" class="nav-link"><i class="fas fa-users"></i> Trabajadores</a>
-                <a th:href="@{/clientes}" class="nav-link"><i class="fas fa-handshake"></i> Clientes</a> 
-                <a sec:authorize="hasAnyAuthority('JEFE') or hasAnyRole('JEFE')" th:href="@{/empresa}" class="nav-link"><i class="fas fa-building"></i> Mi Empresa</a>
+            <ul class="sidebar-menu mt-2">
+                <li class="sidebar-item">
+                    <a th:href="@{/}"><i class="fas fa-chart-pie"></i> Inicio</a>
+                </li>
+                
+                <li class="sidebar-header">Operaciones</li>
+                <li class="sidebar-item">
+                    <a th:href="@{/facturas/nueva}"><i class="fas fa-file-invoice-dollar"></i> Crear Factura</a>
+                </li>
+                <li class="sidebar-item">
+                    <a th:href="@{/facturas/historial}"><i class="fas fa-history"></i> Historial Facturas</a>
+                </li>
+                <li class="sidebar-item">
+                    <a th:href="@{/operaciones/impuestos}"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
+                </li>
+                <li class="sidebar-item">
+                    <a th:href="@{/operaciones/declaraciones}"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
+                </li>
+                <li class="sidebar-item active">
+                    <a th:href="@{/operaciones/nominas}"><i class="fas fa-wallet"></i> Nóminas / Sueldos</a>
+                </li>
+                
+                <li class="sidebar-header">Administración</li>
+                <li class="sidebar-item">
+                    <a th:href="@{/usuarios}"><i class="fas fa-users"></i> Trabajadores</a>
+                </li>
+                <li class="sidebar-item">
+                    <a th:href="@{/clientes}"><i class="fas fa-handshake"></i> Clientes</a>
+                </li>
+                <li class="sidebar-item">
+                    <a th:href="@{/empresa}"><i class="fas fa-building"></i> Mi Empresa</a>
+                </li>
+                <li class="sidebar-item">
+                    <a th:href="@{/usuarios}"><i class="fas fa-users-cog"></i> Auditoría / Logs</a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <a th:href="@{/perfil}" class="text-decoration-none" style="display: block;">
+                    <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="User Profile">
+                        <div class="user-info">
+                            <span sec:authentication="name">Usuario</span>
+                            <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>
+                        </div>
+                    </div>
+                </a>
+                <div class="sidebar-item">
+                    <form th:action="@{/logout}" method="post" class="m-0">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
+                        <button type="submit" class="btn-logout sidebar-item"><i class="fas fa-sign-out-alt me-2" style="width: 20px;"></i>Cerrar Sesión</button>
+                    </form>
+                </div>
             </div>
-        </nav>
-        
-        <div class="mt-auto border-top pt-3 border-secondary" style="border-color: rgba(255,255,255,0.08) !important;">
-            <a th:href="@{/perfil}" class="nav-link mb-2"><i class="fas fa-user-circle"></i> Mi Perfil</a>
-            <form th:action="@{/logout}" method="post">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
-                <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 w-100 text-start ps-1" style="font-size: 0.7rem;">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </button>
-            </form>
         </div>
-    </aside>
 
-    <main class="main-content">
-        <div class="d-flex justify-content-between align-items-end mb-4">
-            <div>
-                <h2 class="fw-bold m-0" style="color: var(--navy); font-size: 1.3rem;">Cálculo y Control de Nóminas</h2>
+        <main class="main-content">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h2 class="fw-bold m-0" style="color: var(--navy); font-size: 1.3rem;">Cálculo y Control de Nóminas</h2>
+                    <p class="m-0" style="font-size: 0.7rem; color: var(--text-muted);">Administración de percepciones, incidencias y generación de recibos para el equipo.</p>
+                </div>
+                <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')">
+                    <button class="btn btn-navy btn-sm px-3 fw-bold rounded-pill" style="font-size: 0.65rem;" data-bs-toggle="modal" data-bs-target="#modalNuevaNomina">
+                        <i class="fas fa-calculator me-1"></i> Generar Recibo de Nómina
+                    </button>
+                </div>
             </div>
-            <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')">
-                <button class="btn btn-primary btn-sm px-3 fw-bold rounded-pill" style="font-size: 0.65rem;" data-bs-toggle="modal" data-bs-target="#modalNuevaNomina">
-                    <i class="fas fa-calculator me-1"></i> Generar Recibo de Nómina
-                </button>
-            </div>
-        </div>
 
-        <div class="card-custom">
-            <h6 class="fw-bold text-navy mb-3"><i class="fas fa-history me-2 text-muted"></i>Historial de Pagos Emitidos</h6>
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Trabajador</th>
-                            <th>Incidencias</th>
-                            <th>Sueldo Neto</th>
-                            <th>Estatus</th>
-                            <th class="text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="n : ${nominas}">
-                            <td class="text-muted" th:text="${#temporals.format(n.fechaEmision, 'dd/MM/yyyy')}"></td>
-                            <td class="fw-bold text-navy" th:text="${n.trabajador.username}"></td>
-                            <td class="text-muted" style="font-size: 0.65rem;">
-                                <span th:text="${n.diasTrabajados} + 'd, ' + ${n.horasExtra} + 'he, ' + ${n.faltas} + 'f, ' + ${n.retardos} + 'r'"></span>
-                            </td>
-                            <td class="fw-bold text-dark" th:text="${'$' + #numbers.formatDecimal(n.sueldoNeto, 1, 2, 'POINT')}"></td>
-                            <td><span th:class="${n.estado == 'PAGADO' ? 'badge-pagado' : 'badge-simulado'}" th:text="${n.estado}"></span></td>
-                            <td class="text-center">
-                                <a th:href="@{'/operaciones/nominas/descargar/' + ${n.id}}" class="btn btn-sm btn-outline-primary" style="padding: 2px 6px;" title="PDF"><i class="fas fa-file-pdf"></i></a>
-                                <a sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')" 
-                                   th:href="@{'/operaciones/nominas/eliminar/' + ${n.id}}" class="btn btn-sm btn-outline-danger" style="padding: 2px 6px;" onclick="return confirm('¿Borrar?');"><i class="fas fa-trash-alt"></i></a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="card-custom">
+                <h6 class="fw-bold mb-3" style="color: var(--navy);"><i class="fas fa-history me-2 text-muted"></i>Historial de Pagos Emitidos</h6>
+                <div class="table-responsive">
+                    <table class="table align-middle m-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Trabajador</th>
+                                <th>Incidencias</th>
+                                <th>Sueldo Neto</th>
+                                <th>Estatus</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="n : ${nominas}">
+                                <td class="text-muted" th:text="${#temporals.format(n.fechaEmision, 'dd/MM/yyyy')}">15/06/2026</td>
+                                <td class="fw-bold" style="color: var(--navy);" th:text="${n.trabajador.username}">Trabajador</td>
+                                <td class="text-muted" style="font-size: 0.65rem;">
+                                    <span th:text="${n.diasTrabajados} + 'd, ' + ${n.horasExtra} + 'he, ' + ${n.faltas} + 'f, ' + ${n.retardos} + 'r'">15d, 0he, 0f, 0r</span>
+                                </td>
+                                <td class="fw-bold text-dark" th:text="${'$' + #numbers.formatDecimal(n.sueldoNeto, 1, 2, 'POINT')}">$0.00</td>
+                                <td><span th:class="${n.estado == 'PAGADO' ? 'badge-pagado' : 'badge-simulado'}" th:text="${n.estado}">SIMULADO</span></td>
+                                <td class="text-center">
+                                    <a th:href="@{'/operaciones/nominas/descargar/' + ${n.id}}" class="btn btn-sm btn-outline-info" style="border-radius: 6px; padding: 2px 6px;" title="PDF">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                    <a sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')" 
+                                       th:href="@{'/operaciones/nominas/eliminar/' + ${n.id}}" class="btn btn-sm btn-outline-danger" style="border-radius: 6px; padding: 2px 6px;" onclick="return confirm('¿Está seguro de eliminar esta nómina?');" title="Eliminar">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(nominas)}">
+                                <td colspan="6" class="text-center text-muted py-4">No hay recibos de nómina generados en el historial.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')" class="modal fade" id="modalNuevaNomina" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content" style="border-radius: 16px;">
-                <div class="modal-header">
-                    <h6 class="modal-title fw-bold">Generar Nueva Nómina</h6>
+                <div class="modal-header py-2">
+                    <h6 class="modal-title fw-bold" style="color: var(--navy); font-size: 0.8rem;"><i class="fas fa-calculator me-2 text-primary"></i>Nueva Nómina</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
-                <form th:action="@{/operaciones/nominas/guardar}" method="post" class="modal-body p-4">
+                <form th:action="@{/operaciones/nominas/guardar}" method="post" class="modal-body text-start">
                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
                     
-                    <label class="small fw-bold">Trabajador</label>
-                    <select name="trabajadorId" class="form-select form-select-sm mb-2" required>
-                        <option value="" disabled selected>-- Seleccionar --</option>
-                        <option th:each="t : ${trabajadores}" th:value="${t.id}" th:text="${t.username}"></option>
-                    </select>
+                    <div class="mb-2">
+                        <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Trabajador</label>
+                        <select name="trabajadorId" class="form-select form-select-sm" style="font-size: 0.65rem; border-radius: 8px;" required>
+                            <option value="" disabled selected>-- Seleccionar --</option>
+                            <option th:each="t : ${trabajadores}" th:value="${t.id}" th:text="${t.username}"></option>
+                        </select>
+                    </div>
 
-                    <label class="small fw-bold">Periodo de Pago</label>
-                    <input type="text" name="periodo" class="form-control form-control-sm mb-2" placeholder="Ej: 1ra Quincena Junio 2026" required>
+                    <div class="mb-2">
+                        <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Periodo de Pago</label>
+                        <input type="text" name="periodo" class="form-control form-control-sm" placeholder="Ej: 1ra Quincena Junio 2026" style="font-size: 0.65rem; border-radius: 8px;" required>
+                    </div>
                     
-                    <div class="row">
+                    <div class="row g-2 mb-2">
                         <div class="col-6">
-                            <label class="small fw-bold">Sueldo Base ($)</label>
-                            <input type="number" name="sueldoBase" class="form-control form-control-sm mb-2" step="0.01" required>
+                            <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Sueldo Base ($)</label>
+                            <input type="number" name="sueldoBase" class="form-control form-control-sm" step="0.01" style="font-size: 0.65rem; border-radius: 8px;" required>
                         </div>
                         <div class="col-6">
-                            <label class="small fw-bold">Días Trabajados</label>
-                            <input type="number" name="diasTrabajados" class="form-control form-control-sm mb-2" value="15" required>
+                            <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Días Trabajados</label>
+                            <input type="number" name="diasTrabajados" class="form-control form-control-sm" value="15" style="font-size: 0.65rem; border-radius: 8px;" required>
                         </div>
                     </div>
 
-                    <div class="row">
+                    <div class="row g-2 mb-2">
                         <div class="col-6">
-                            <label class="small fw-bold">Horas Extra</label>
-                            <input type="number" name="horasExtra" class="form-control form-control-sm mb-2" value="0">
+                            <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Horas Extra</label>
+                            <input type="number" name="horasExtra" class="form-control form-control-sm" value="0" style="font-size: 0.65rem; border-radius: 8px;">
                         </div>
                         <div class="col-6">
-                            <label class="small fw-bold">Faltas</label>
-                            <input type="number" name="faltas" class="form-control form-control-sm mb-2" value="0">
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-6">
-                            <label class="small fw-bold">Retardos</label>
-                            <input type="number" name="retardos" class="form-control form-control-sm mb-2" value="0">
-                        </div>
-                        <div class="col-6">
-                            <label class="small fw-bold">Otras Percepciones ($)</label>
-                            <input type="number" name="percepciones" class="form-control form-control-sm mb-2" value="0.00" step="0.01">
+                            <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Faltas</label>
+                            <input type="number" name="faltas" class="form-control form-control-sm" value="0" style="font-size: 0.65rem; border-radius: 8px;">
                         </div>
                     </div>
 
-                    <label class="small fw-bold">Otras Deducciones ($)</label>
-                    <input type="number" name="deducciones" class="form-control form-control-sm mb-2" value="0.00" step="0.01">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Retardos</label>
+                            <input type="number" name="retardos" class="form-control form-control-sm" value="0" style="font-size: 0.65rem; border-radius: 8px;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Otras Percepciones</label>
+                            <input type="number" name="percepciones" class="form-control form-control-sm" value="0.00" step="0.01" style="font-size: 0.65rem; border-radius: 8px;">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Otras Deducciones ($)</label>
+                        <input type="number" name="deducciones" class="form-control form-control-sm" value="0.00" step="0.01" style="font-size: 0.65rem; border-radius: 8px;">
+                    </div>
                     
-                    <label class="small fw-bold">Estatus</label>
-                    <select name="estado" class="form-select form-select-sm mb-2">
-                        <option value="SIMULADO">SIMULADO</option>
-                        <option value="PAGADO">PAGADO</option>
-                    </select>
+                    <div class="mb-2">
+                        <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Estatus</label>
+                        <select name="estado" class="form-select form-select-sm" style="font-size: 0.65rem; border-radius: 8px;">
+                            <option value="SIMULADO">SIMULADO</option>
+                            <option value="PAGADO">PAGADO</option>
+                        </select>
+                    </div>
                     
-                    <label class="small fw-bold">Fecha de Emisión</label>
-                    <input type="date" name="fechaEmision" class="form-control form-control-sm mb-3" required>
+                    <div class="mb-3">
+                        <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Fecha de Emisión</label>
+                        <input type="date" name="fechaEmision" class="form-control form-control-sm" style="font-size: 0.65rem; border-radius: 8px;" required>
+                    </div>
                     
-                    <button type="submit" class="btn btn-navy w-100 fw-bold rounded-pill">Calcular y Guardar</button>
+                    <button type="submit" class="btn btn-navy btn-sm w-100 fw-bold rounded-pill" style="font-size: 0.65rem; padding: 6px;">Calcular y Guardar</button>
                 </form>
             </div>
         </div>
