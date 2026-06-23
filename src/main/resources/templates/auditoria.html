@@ -14,10 +14,10 @@
         }
         body { background: var(--bg); font-family: 'DM Sans', sans-serif; display: flex; min-height: 100vh; margin: 0; font-size: 0.75rem; color: #1e293b; }
         
-        /* Sidebar */
-        .sidebar { width: 200px; background: var(--navy); color: white; padding: 20px; position: fixed; height: 100vh; display: flex; flex-direction: column; }
-        .sidebar h4 { font-size: 0.9rem; font-weight: 800; margin-bottom: 25px; color: white; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; text-transform: uppercase; }
-        .nav-link-side { color: var(--text-muted); padding: 10px 12px; border-radius: 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; text-decoration: none; transition: all 0.2s; }
+        /* Sidebar estilizado oscuro uniforme */
+        .sidebar { width: 200px; background: var(--navy); color: white; padding: 20px; position: fixed; height: 100vh; display: flex; flex-direction: column; z-index: 100; }
+        .sidebar h4 { font-size: 0.9rem; font-weight: 800; margin-bottom: 25px; color: white; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.5px; }
+        .nav-link-side { color: var(--text-muted); padding: 10px 12px; border-radius: 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; text-decoration: none; transition: all 0.2s ease; }
         .nav-link-side:hover, .nav-link-side.active { background: rgba(255,255,255,0.1); color: white; font-weight: bold; }
         
         /* Contenido Principal */
@@ -37,12 +37,36 @@
 <body>
 
     <aside class="sidebar">
-        <h4>OFICINA FISCAL</h4>
+        <h4 th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</h4>
         <nav class="nav flex-column flex-grow-1">
-            <a href="/" class="nav-link-side"><i class="fas fa-chart-pie"></i> Inicio </a>
-            <a href="/usuarios" class="nav-link-side"><i class="fas fa-users"></i> Trabajadores</a>
-            <a href="/operaciones/auditoria" class="nav-link-side active"><i class="fas fa-shield-alt"></i> Auditoría</a>
+            <a th:href="@{/}" class="nav-link-side"><i class="fas fa-chart-pie"></i> Inicio</a>
+            
+            <p class="text-uppercase fw-bold mb-2 mt-3" style="font-size: 0.55rem; color: #a3aed0; opacity: 0.6; letter-spacing: 1px; padding-left: 10px;">Operaciones</p>
+            <a th:href="@{/facturas/nueva}" class="nav-link-side"><i class="fas fa-file-invoice"></i> Crear Factura</a>
+            <a th:href="@{/facturas/historial}" class="nav-link-side"><i class="fas fa-history"></i> Historial Facturas</a>
+            
+            <a th:href="@{/operaciones/impuestos}" class="nav-link-side"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
+            <a th:href="@{/operaciones/declaraciones}" class="nav-link-side"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
+            <a th:href="@{/operaciones/nominas}" class="nav-link-side"><i class="fas fa-file-invoice-dollar"></i> Nóminas / Sueldos</a>
+            
+            <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')" class="mt-3">
+                <p class="text-uppercase fw-bold mb-2" style="font-size: 0.55rem; color: #a3aed0; opacity: 0.6; letter-spacing: 1px; padding-left: 10px;">Administración</p>
+                <a th:href="@{/usuarios}" class="nav-link-side"><i class="fas fa-users"></i> Trabajadores</a>
+                <a th:href="@{/clientes}" class="nav-link-side"><i class="fas fa-handshake"></i> Clientes</a>
+                <a sec:authorize="hasAnyRole('JEFE')" th:href="@{/empresa}" class="nav-link-side"><i class="fas fa-building"></i> Mi Empresa</a>
+                <a th:href="@{/operaciones/auditoria}" class="nav-link-side active"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
+            </div>
         </nav>
+        
+        <div class="mt-auto border-top pt-3" style="border-color: rgba(255,255,255,0.1) !important;">
+            <a th:href="@{/perfil}" class="nav-link-side mb-2"><i class="fas fa-user-circle"></i> Mi Perfil</a>
+            <form th:action="@{/logout}" method="post">
+                <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 w-100 text-start ps-2" style="font-size: 0.7rem;">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </form>
+        </div>
     </aside>
 
     <main class="main-content">
