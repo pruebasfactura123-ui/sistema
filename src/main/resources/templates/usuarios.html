@@ -184,7 +184,7 @@
                     <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                     
                     <div class="col-md-3">
-                        <input type="text" name="nuevoUsuario" class="form-control form-control-sm" placeholder="Nombre de usuario" style="border-radius: 8px; font-size: 0.65rem;" required>
+                        <input type="text" name="nuevoUsuario" class="form-control form-control-sm" placeholder="Nombre de usuario" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+" oninput="this.value = this.value.replace(/[0-9]/g, '')" style="border-radius: 8px; font-size: 0.65rem;" required>
                     </div>
                     <div class="col-md-3">
                         <input type="password" name="nuevaClave" class="form-control form-control-sm" placeholder="Contraseña inicial" style="border-radius: 8px; font-size: 0.65rem;" required>

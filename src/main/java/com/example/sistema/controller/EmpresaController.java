@@ -5,7 +5,7 @@ import com.example.sistema.model.Usuario;
 import com.example.sistema.repository.EmpresaRepository;
 import com.example.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder; // Inyección para encriptar claves si lo usas
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +24,6 @@ public class EmpresaController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    // Si utilizas BCryptPasswordEncoder en tu SecurityConfig, Spring lo inyectará automáticamente
     @Autowired(required = false)
     private PasswordEncoder passwordEncoder;
 
@@ -52,7 +51,7 @@ public class EmpresaController {
             
         } catch (Exception e) {
             e.printStackTrace();
-            return "redirect:/?errorSesion";
+            return "redirect:/usuarios?errorSesion";
         }
         
         return "empresa"; 
@@ -80,7 +79,7 @@ public class EmpresaController {
         }
     }
 
-    // NUEVO MÉTODO: Mapeo para registrar el Personal Administrativo desde el Panel de Control
+    // MÉTODO OPTIMIZADO: Guarda y te mantiene en la sección de trabajadores sin parpadeos extraños
     @PostMapping("/usuarios/crear")
     public String registrarPersonalAdministrativo(
             @RequestParam("nuevoUsuario") String nuevoUsuario,
@@ -95,20 +94,19 @@ public class EmpresaController {
 
             // VALIDACIÓN 1: Que el nombre no contenga números ni caracteres especiales
             if (!usuarioLimpio.matches("^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$")) {
-                return "redirect:/?errorUserNombre";
+                return "redirect:/usuarios?errorUserNombre";
             }
 
-            // VALIDACIÓN 2: Que el username no exista ya en la base de datos (Garantiza RFC / Identificador único)
+            // VALIDACIÓN 2: Que el username no exista ya en la base de datos (Garantiza Identificador único)
             boolean usuarioExiste = usuarioRepository.findByUsername(usuarioLimpio).isPresent();
             if (usuarioExiste) {
-                return "redirect:/?errorUserDuplicado";
+                return "redirect:/usuarios?errorUserDuplicado";
             }
 
             // Crear el nuevo usuario asignándole la misma empresa del Jefe/Gerente actual
             Usuario empleado = new Usuario();
             empleado.setUsername(usuarioLimpio);
             
-            // Si manejas encriptación de contraseñas, la procesamos, si no, se guarda en texto plano
             if (passwordEncoder != null) {
                 empleado.setPassword(passwordEncoder.encode(nuevaClave));
             } else {
@@ -121,11 +119,11 @@ public class EmpresaController {
 
             usuarioRepository.save(empleado);
 
-            return "redirect:/?exitoUser";
+            return "redirect:/usuarios?exitoUser";
 
         } catch (Exception e) {
             e.printStackTrace();
-            return "redirect:/?errorUser";
+            return "redirect:/usuarios?errorUser";
         }
     }
 }
