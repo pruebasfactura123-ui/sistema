@@ -2,17 +2,17 @@ package com.example.sistema.controller;
 
 import com.example.sistema.model.Cliente;
 import com.example.sistema.model.Usuario;
-import com.example.sistema.model.Auditoria; // <-- Importación agregada
+import com.example.sistema.model.Auditoria;
 import com.example.sistema.repository.ClienteRepository;
 import com.example.sistema.repository.UsuarioRepository;
-import com.example.sistema.repository.AuditoriaRepository; // <-- Importación agregada
+import com.example.sistema.repository.AuditoriaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable; // <-- Importación agregada
+import org.springframework.web.bind.annotation.PathVariable;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +27,7 @@ public class ClienteController {
     private UsuarioRepository usuarioRepository;
 
     @Autowired
-    private AuditoriaRepository auditoriaRepository; // <-- Inyección agregada
+    private AuditoriaRepository auditoriaRepository;
 
     // Cargar la página con la lista filtrada por la empresa del usuario logueado
     @GetMapping("/clientes")
@@ -70,7 +70,7 @@ public class ClienteController {
         return "clientes"; 
     }
 
-    // 1. Guardar nuevo cliente ASOCIANDO su empresa Y REGISTRANDO AUDITORÍA
+    // 1. Guardar nuevo cliente con validación de nombre (sin números) y RFC único por empresa
     @PostMapping("/clientes/guardar")
     public String guardarCliente(Principal principal, @ModelAttribute("clienteNuevo") Cliente cliente) {
         if (principal == null) return "redirect:/login";
@@ -79,9 +79,24 @@ public class ClienteController {
             Usuario logueado = usuarioRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-            // Asignar empresa al cliente
-            cliente.setNombre(cliente.getNombre().trim().toUpperCase());
-            cliente.setRfc(cliente.getRfc().trim().toUpperCase());
+            String nombreLimpio = cliente.getNombre().trim().toUpperCase();
+            String rfcLimpio = cliente.getRfc().trim().toUpperCase();
+
+            // VALIDACIÓN 1: El nombre no debe contener números (Solo letras, espacios, acentos y puntos para las S.A.)
+            if (!nombreLimpio.matches("^[A-ZÁÉÍÓÚÑ\\s\\.]+$")) {
+                return "redirect:/clientes?errorNombre";
+            }
+
+            // VALIDACIÓN 2: El RFC no debe repetirse para la misma empresa
+            // Nota: Asegúrate de tener definido 'existsByRfcAndEmpresaId' en tu ClienteRepository
+            boolean rfcDuplicado = clienteRepository.existsByRfcAndEmpresaId(rfcLimpio, logueado.getEmpresa().getId());
+            if (rfcDuplicado) {
+                return "redirect:/clientes?errorRfc";
+            }
+
+            // Asignar los valores procesados
+            cliente.setNombre(nombreLimpio);
+            cliente.setRfc(rfcLimpio);
             cliente.setEmpresa(logueado.getEmpresa());
 
             // Guardar cliente en BD
@@ -103,7 +118,7 @@ public class ClienteController {
         return "redirect:/clientes?exito";
     }
 
-    // 2. NUEVO MÉTODO: Mapeo exacto para solucionar el Error 404 del botón "Baja"
+    // 2. Mapeo para dar de baja clientes
     @PostMapping("/clientes/eliminar/{id}")
     public String eliminarCliente(Principal principal, @PathVariable Long id) {
         if (principal == null) return "redirect:/login";

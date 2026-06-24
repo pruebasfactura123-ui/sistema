@@ -5,11 +5,13 @@ import com.example.sistema.model.Usuario;
 import com.example.sistema.repository.EmpresaRepository;
 import com.example.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder; // Inyección para encriptar claves si lo usas
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
 
@@ -21,6 +23,10 @@ public class EmpresaController {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    // Si utilizas BCryptPasswordEncoder en tu SecurityConfig, Spring lo inyectará automáticamente
+    @Autowired(required = false)
+    private PasswordEncoder passwordEncoder;
 
     private Usuario getUsuarioLogueado(Principal principal) {
         if (principal == null) throw new RuntimeException("No hay ninguna sesión activa.");
@@ -71,6 +77,55 @@ public class EmpresaController {
         } catch (Exception e) {
             e.printStackTrace();
             return "redirect:/empresa?error";
+        }
+    }
+
+    // NUEVO MÉTODO: Mapeo para registrar el Personal Administrativo desde el Panel de Control
+    @PostMapping("/usuarios/crear")
+    public String registrarPersonalAdministrativo(
+            @RequestParam("nuevoUsuario") String nuevoUsuario,
+            @RequestParam("nuevaClave") String nuevaClave,
+            Principal principal) {
+        
+        if (principal == null) return "redirect:/login";
+
+        try {
+            Usuario logueado = getUsuarioLogueado(principal);
+            String usuarioLimpio = nuevoUsuario.trim();
+
+            // VALIDACIÓN 1: Que el nombre no contenga números ni caracteres especiales
+            if (!usuarioLimpio.matches("^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$")) {
+                return "redirect:/?errorUserNombre";
+            }
+
+            // VALIDACIÓN 2: Que el username no exista ya en la base de datos (Garantiza RFC / Identificador único)
+            boolean usuarioExiste = usuarioRepository.findByUsername(usuarioLimpio).isPresent();
+            if (usuarioExiste) {
+                return "redirect:/?errorUserDuplicado";
+            }
+
+            // Crear el nuevo usuario asignándole la misma empresa del Jefe/Gerente actual
+            Usuario empleado = new Usuario();
+            empleado.setUsername(usuarioLimpio);
+            
+            // Si manejas encriptación de contraseñas, la procesamos, si no, se guarda en texto plano
+            if (passwordEncoder != null) {
+                empleado.setPassword(passwordEncoder.encode(nuevaClave));
+            } else {
+                empleado.setPassword(nuevaClave); 
+            }
+            
+            empleado.setRol("AUXILIAR"); // Rol por defecto para el personal autorizado
+            empleado.setEmpresa(logueado.getEmpresa());
+            empleado.setFotoUrl("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop"); // Avatar por defecto
+
+            usuarioRepository.save(empleado);
+
+            return "redirect:/?exitoUser";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "redirect:/?errorUser";
         }
     }
 }

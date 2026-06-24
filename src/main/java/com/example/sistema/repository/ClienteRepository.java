@@ -13,4 +13,7 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     // Consulta explícita y segura que usaremos en ambos controladores
     @Query("SELECT c FROM Cliente c WHERE c.empresa.id = :empresaId")
     List<Cliente> findClientesPorEmpresa(@Param("empresaId") Long empresaId);
+
+    // Método derivado para validar que un RFC no se repita en la misma empresa
+    boolean existsByRfcAndEmpresaId(String rfc, Long empresaId);
 }

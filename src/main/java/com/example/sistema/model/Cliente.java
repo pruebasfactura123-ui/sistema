@@ -1,6 +1,7 @@
 package com.example.sistema.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 @Table(name = "clientes")
@@ -10,8 +11,14 @@ public class Cliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Validación: Solo letras, espacios, acentos y puntos (para empresas Tipo S.A. de C.V.)
+    @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s\\.]+$", message = "El nombre solo debe contener letras, espacios y puntos.")
     private String nombre;
+
+    // Validación: Formato oficial de RFC en México (3-4 letras, 6 números, 3 caracteres de homoclave)
+    @Pattern(regexp = "^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$", message = "El formato del RFC no es válido.")
     private String rfc;
+    
     private String telefono;
     private String correo;
 

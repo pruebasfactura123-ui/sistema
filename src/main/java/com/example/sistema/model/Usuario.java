@@ -1,6 +1,7 @@
 package com.example.sistema.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 @Table(name = "usuarios")
@@ -10,6 +11,8 @@ public class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Validación: Solo letras, espacios y acentos (bloquea números y caracteres especiales)
+    @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "El nombre de usuario solo debe contener letras y espacios.")
     @Column(name = "username", unique = true, nullable = false)
     private String username;
 

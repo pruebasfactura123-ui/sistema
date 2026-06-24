@@ -144,11 +144,11 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Cantidad</label>
-                        <input type="number" class="form-control text-center" id="inputCantidad" value="1" min="1">
+                        <input type="number" class="form-control text-center" id="inputCantidad" placeholder="1" min="1">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Valor Unitario ($)</label>
-                        <input type="number" class="form-control text-end" id="inputPrecio" value="100.00" step="0.01">
+                        <input type="number" class="form-control text-end" id="inputPrecio" placeholder="100.00" step="0.01">
                     </div>
                     <div class="col-md-2">
                         <button type="button" class="btn btn-dark w-100 fw-bold btn-sm" id="btnAnadir" style="padding: 5px;"><i class="fas fa-plus me-1"></i>Añadir</button>
@@ -241,11 +241,20 @@
 
         btnAnadir.addEventListener('click', () => {
             const descripcion = document.getElementById('inputDescripcion').value.trim();
-            const cantidad = parseInt(document.getElementById('inputCantidad').value);
-            const precioUnitario = parseFloat(document.getElementById('inputPrecio').value);
+            const cantidadInput = document.getElementById('inputCantidad').value.trim();
+            const precioInput = document.getElementById('inputPrecio').value.trim();
 
-            if (!descripcion || cantidad <= 0 || precioUnitario <= 0) {
-                alert('Por favor, ingresa los datos de la partida correctamente.');
+            // Validación estricta: todos los campos deben estar rellenos y ser válidos
+            if (!descripcion || cantidadInput === '' || precioInput === '') {
+                alert('Por favor, rellenar todos los campos del concepto (Descripción, Cantidad y Valor Unitario).');
+                return;
+            }
+
+            const cantidad = parseInt(cantidadInput);
+            const precioUnitario = parseFloat(precioInput);
+
+            if (cantidad <= 0 || precioUnitario <= 0) {
+                alert('La cantidad y el valor unitario deben ser mayores a cero.');
                 return;
             }
 
@@ -258,9 +267,11 @@
             });
 
             actualizarTabla();
+            
+            // Limpia los campos tras añadir con éxito
             document.getElementById('inputDescripcion').value = '';
-            document.getElementById('inputCantidad').value = '1';
-            document.getElementById('inputPrecio').value = '100.00';
+            document.getElementById('inputCantidad').value = '';
+            document.getElementById('inputPrecio').value = '';
         });
 
         function actualizarTabla() {
