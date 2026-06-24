@@ -468,25 +468,6 @@ public class FacturaController {
         return "usuarios";
     }
 
-    @PostMapping("/usuarios/crear")
-    public String crearTrabajador(Principal principal, @RequestParam String nuevoUsuario, @RequestParam String nuevaClave, @RequestParam(required = false) String fotoUrl) {
-        try {
-            Usuario logueado = getUsuarioLogueado(principal);
-            Usuario u = new Usuario();
-            u.setUsername(nuevoUsuario.trim());
-            u.setPassword(passwordEncoder.encode(nuevaClave.trim()));
-            u.setRol(nuevoUsuario.trim().toLowerCase().startsWith("gerente") ? "GERENTE" : "TRABAJADOR");
-            u.setEmpresa(logueado.getEmpresa());
-            if (fotoUrl == null || fotoUrl.trim().isEmpty()) {
-                u.setFotoUrl("https://cdn-icons-png.flaticon.com/512/3135/3135715.png");
-            } else {
-                u.setFotoUrl(fotoUrl.trim());
-            }
-            usuarioRepository.save(u);
-        } catch (Exception e) { e.printStackTrace(); }
-        return "redirect:/usuarios";
-    }
-
     @PostMapping("/usuarios/eliminar/{id}")
     public String eliminarTrabajador(Principal principal, @PathVariable Long id) {
         try {
