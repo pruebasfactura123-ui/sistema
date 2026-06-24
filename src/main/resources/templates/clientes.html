@@ -178,31 +178,31 @@
             </div>
 
             <div class="mb-3">
-                <div th:if="${param.exito}" class="alert alert-success alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                <div th:if="${param.exito != null}" class="alert alert-success alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
                     <i class="fas fa-check-circle me-2"></i><strong>¡Éxito!</strong> El cliente se guardó correctamente y fue registrado en la bitácora.
                     <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
-                <div th:if="${param.exitoEliminar}" class="alert alert-warning alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                <div th:if="${param.exitoEliminar != null}" class="alert alert-warning alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
                     <i class="fas fa-info-circle me-2"></i>El cliente fue removido físicamente de la base de datos de manera exitosa.
                     <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
-                <div th:if="${param.errorNombre}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                <div th:if="${param.errorNombre != null}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
                     <i class="fas fa-exclamation-triangle me-2"></i><strong>Error de Nombre:</strong> Solo se permiten letras, espacios y puntos (ej. S.A. de C.V.). No introduzcas números.
                     <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
-                <div th:if="${param.errorRfcFormato}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                <div th:if="${param.errorRfcFormato != null}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
                     <i class="fas fa-exclamation-triangle me-2"></i><strong>Error de RFC:</strong> Estructura no válida para el SAT. Debe tener de 3 a 4 letras iniciales y homoclave.
                     <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
-                <div th:if="${param.errorRfcDuplicado}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                <div th:if="${param.errorRfcDuplicado != null}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
                     <i class="fas fa-copy me-2"></i><strong>RFC Duplicado:</strong> Este RFC ya se encuentra registrado para un cliente de tu empresa.
                     <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
-                <div th:if="${param.errorPermisos}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                <div th:if="${param.errorPermisos != null}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
                     <i class="fas fa-lock me-2"></i><strong>Acceso Denegado:</strong> No cuentas con los privilegios de Jefe o Gerente necesarios para dar de baja clientes.
                     <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
-                <div th:if="${param.error || param.errorEliminar}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                <div th:if="${param.error != null || param.errorEliminar != null}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
                     <i class="fas fa-bug me-2"></i>Ocurrió una anomalía interna al procesar la solicitud en SQL Server.
                     <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
