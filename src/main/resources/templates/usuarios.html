@@ -178,9 +178,23 @@
                 <p class="m-0" style="font-size: 0.7rem; color: var(--text-muted);">Alta de empleados, asignación y control de jerarquías del equipo administrativo.</p>
             </div>
 
+            <div th:if="${param.exitoUser}" class="alert alert-success py-2 px-3 rounded-3 mb-3 fw-bold" style="font-size: 0.7rem;">
+                <i class="fas fa-check-circle me-1"></i> Empleado registrado con éxito en la empresa.
+            </div>
+            <div th:if="${param.errorUserNombre}" class="alert alert-danger py-2 px-3 rounded-3 mb-3 fw-bold" style="font-size: 0.7rem;">
+                <i class="fas fa-exclamation-circle me-1"></i> Error: El nombre de usuario no puede contener números ni caracteres especiales.
+            </div>
+            <div th:if="${param.errorUserDuplicado}" class="alert alert-danger py-2 px-3 rounded-3 mb-3 fw-bold" style="font-size: 0.7rem;">
+                <i class="fas fa-exclamation-circle me-1"></i> Error: El nombre de usuario ya está registrado en el sistema.
+            </div>
+            <div th:if="${param.errorUser}" class="alert alert-danger py-2 px-3 rounded-3 mb-3 fw-bold" style="font-size: 0.7rem;">
+                <i class="fas fa-exclamation-circle me-1"></i> Ocurrió un error inesperado al procesar el alta del trabajador.
+            </div>
+
             <div class="card-custom">
                 <h6 class="fw-bold mb-3 text-navy" style="color: var(--navy);"><i class="fas fa-user-plus me-2 text-muted"></i> Registrar Nuevo Empleado</h6>
-                <form th:action="@{/usuarios/crear}" method="post" class="row g-2 align-items-center">
+                
+                <form th:action="@{/usuarios/registrar}" method="post" class="row g-2 align-items-center">
                     <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                     
                     <div class="col-md-3">

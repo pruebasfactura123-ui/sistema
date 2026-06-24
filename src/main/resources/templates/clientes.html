@@ -171,10 +171,41 @@
             </div>
         </div>
 
-        <main class="main-content">
+        <main class="main-content flex-grow-1">
             <div class="mb-4">
                 <h2 class="fw-bold m-0" style="color: var(--navy); font-size: 1.3rem;">Administración de Clientes</h2>
                 <p class="m-0" style="font-size: 0.7rem; color: var(--text-muted);">Alta de contribuyentes, consulta de información de contacto y catálogos de facturación.</p>
+            </div>
+
+            <div class="mb-3">
+                <div th:if="${param.exito}" class="alert alert-success alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                    <i class="fas fa-check-circle me-2"></i><strong>¡Éxito!</strong> El cliente se guardó correctamente y fue registrado en la bitácora.
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
+                </div>
+                <div th:if="${param.exitoEliminar}" class="alert alert-warning alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                    <i class="fas fa-info-circle me-2"></i>El cliente fue removido físicamente de la base de datos de manera exitosa.
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
+                </div>
+                <div th:if="${param.errorNombre}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                    <i class="fas fa-exclamation-triangle me-2"></i><strong>Error de Nombre:</strong> Solo se permiten letras, espacios y puntos (ej. S.A. de C.V.). No introduzcas números.
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
+                </div>
+                <div th:if="${param.errorRfcFormato}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                    <i class="fas fa-exclamation-triangle me-2"></i><strong>Error de RFC:</strong> Estructura no válida para el SAT. Debe tener de 3 a 4 letras iniciales y homoclave.
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
+                </div>
+                <div th:if="${param.errorRfcDuplicado}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                    <i class="fas fa-copy me-2"></i><strong>RFC Duplicado:</strong> Este RFC ya se encuentra registrado para un cliente de tu empresa.
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
+                </div>
+                <div th:if="${param.errorPermisos}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                    <i class="fas fa-lock me-2"></i><strong>Acceso Denegado:</strong> No cuentas con los privilegios de Jefe o Gerente necesarios para dar de baja clientes.
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
+                </div>
+                <div th:if="${param.error || param.errorEliminar}" class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 m-0 mb-3" role="alert" style="font-size: 0.7rem;">
+                    <i class="fas fa-bug me-2"></i>Ocurrió una anomalía interna al procesar la solicitud en SQL Server.
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
+                </div>
             </div>
 
             <div class="row g-4">
@@ -186,11 +217,11 @@
                             
                             <div class="mb-2">
                                 <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Nombre / Razón Social</label>
-                                <input type="text" th:field="*{nombre}" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem;" required>
+                                <input type="text" th:field="*{nombre}" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem;" pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.]+$" title="Solo letras, espacios y puntos." required>
                             </div>
                             <div class="mb-2">
                                 <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">RFC</label>
-                                <input type="text" th:field="*{rfc}" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem; text-transform: uppercase;" required>
+                                <input type="text" th:field="*{rfc}" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem; text-transform: uppercase;" pattern="^[A-Za-zÑñ&]{3,4}[0-9]{6}[A-Za-z0-9]{3}$" title="Formato oficial de RFC (12 o 13 caracteres con homoclave)" required>
                             </div>
                             <div class="mb-2">
                                 <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Teléfono</label>

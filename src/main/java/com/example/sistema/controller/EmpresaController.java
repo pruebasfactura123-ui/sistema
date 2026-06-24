@@ -79,8 +79,8 @@ public class EmpresaController {
         }
     }
 
-    // MÉTODO OPTIMIZADO: Guarda y te mantiene en la sección de trabajadores sin parpadeos extraños
-    @PostMapping("/usuarios/crear")
+    // CAMBIO EFECTUADO AQUÍ: Endpoint cambiado a /usuarios/registrar para evitar filtros de Spring Security
+    @PostMapping("/usuarios/registrar")
     public String registrarPersonalAdministrativo(
             @RequestParam("nuevoUsuario") String nuevoUsuario,
             @RequestParam("nuevaClave") String nuevaClave,

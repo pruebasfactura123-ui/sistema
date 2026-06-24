@@ -35,3 +35,12 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Maven ###
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.nextDevelopment
+pom.xml.tagRegistry
+release.properties
+pom.xml.releaseBackup
