@@ -130,36 +130,35 @@
 <body>
 
     <div class="d-flex">
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <i class="fas fa-check-double me-2 text-success"></i>
-                <span th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</span>
-            </div>
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-check-double me-2 text-success"></i>
+            <span th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</span>
+        </div>
+        
+        <ul class="sidebar-menu mt-2">
+            <li class="sidebar-item active">
+                <a th:href="@{/}"><i class="fas fa-chart-pie"></i> Inicio</a>
+            </li>
             
-            <ul class="sidebar-menu mt-2">
-                <li class="sidebar-item active">
-                    <a th:href="@{/}"><i class="fas fa-chart-pie"></i> Inicio</a>
-                </li>
-                
-                <li class="sidebar-header">Operaciones</li>
-                <li class="sidebar-item">
-                    <a th:href="@{/facturas/nueva}"><i class="fas fa-file-invoice-dollar"></i> Crear Factura</a>
-                </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/facturas/historial}"><i class="fas fa-history"></i> Historial Facturas</a>
-                </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/operaciones/impuestos}"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
-                </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/operaciones/declaraciones}"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
-                </li>
-                
-                <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')">
-                    <li class="sidebar-item">
-                        <a th:href="@{/operaciones/nominas}"><i class="fas fa-wallet"></i> Nóminas / Sueldos</a>
-                    </li>
-                </div>
+            <li class="sidebar-header">Operaciones</li>
+            <li class="sidebar-item">
+                <a th:href="@{/facturas/nueva}"><i class="fas fa-file-invoice-dollar"></i> Crear Factura</a>
+            </li>
+            <li class="sidebar-item">
+                <a th:href="@{/facturas/historial}"><i class="fas fa-history"></i> Historial Facturas</a>
+            </li>
+            <li class="sidebar-item">
+                <a th:href="@{/operaciones/impuestos}"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
+            </li>
+            <li class="sidebar-item">
+                <a th:href="@{/operaciones/declaraciones}"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
+            </li>
+            
+            <li class="sidebar-item">
+                <a th:href="@{/operaciones/nominas}"><i class="fas fa-wallet"></i> Nóminas / Sueldos</a>
+            </li>
+        </div>
                 
                 <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')">
                     <li class="sidebar-header">Administración</li>
