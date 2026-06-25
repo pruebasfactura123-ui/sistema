@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Mis Recibos de Nómina - Oficina Fiscal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        
+        /* Estilos del Sidebar idénticos a tu diseño */
+        .sidebar {
+            width: 260px;
+            min-height: 100vh;
+            background-color: #0d1424; /* Color oscuro de tu app */
+            color: #fff;
+        }
+        .sidebar .brand {
+            padding: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar .section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+            padding: 20px 20px 10px 20px;
+            margin: 0;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.7);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover {
+            background-color: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+        .sidebar .nav-link.active {
+            background-color: rgba(255,255,255,0.1);
+            color: #fff;
+            border-radius: 0 20px 20px 0;
+            margin-right: 15px;
+        }
+        .sidebar .nav-link i {
+            width: 25px;
+            font-size: 1.1rem;
+        }
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #fff;
+        }
+
+        /* Contenedor de contenido */
+        .content-container {
+            flex: 1;
+            padding: 25px;
+        }
+        .card-nomina { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .table-responsive { background: #fff; border-radius: 12px; padding: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="d-flex">
+        
+        <div class="sidebar d-flex flex-column">
+            <div class="brand">
+                <i class="fa-solid fa-square-check text-success me-2"></i> OFICINA FISCAL
+            </div>
+            
+            <nav class="nav flex-column mt-3">
+                <a th:href="@{/index}" class="nav-link">
+                    <i class="fa-solid fa-chart-pie"></i> Inicio
+                </a>
+                
+                <p class="section-title">Operaciones</p>
+                
+                <a th:href="@{/operaciones/crear-factura}" class="nav-link">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Crear Factura
+                </a>
+                
+                <a th:href="@{/operaciones/historial-facturas}" class="nav-link">
+                    <i class="fa-solid fa-clock-history"></i> Historial Facturas
+                </a>
+                
+                <a th:href="@{/operaciones/impuestos}" class="nav-link">
+                    <i class="fa-solid fa-calculator"></i> Calc. Impuestos
+                </a>
+                
+                <a th:href="@{/operaciones/declaraciones}" class="nav-link">
+                    <i class="fa-solid fa-calendar-check"></i> Declaraciones SAT
+                </a>
+                
+                <a th:href="@{/operaciones/nominas}" class="nav-link active">
+                    <i class="fa-solid fa-wallet"></i> Nóminas / Sueldos
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="user-avatar d-flex align-items-center justify-content-center text-dark fw-bold me-2">
+                        <i class="fa-solid fa-user text-secondary"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size: 0.9rem;" sec:authentication="name">Trabajador</div>
+                        <small class="text-success" style="font-size: 0.75rem;"><i class="fa-solid fa-circle me-1" style="font-size: 0.6rem;"></i> ONLINE</small>
+                    </div>
+                </div>
+                <a th:href="@{/logout}" class="text-danger text-decoration-none d-block pt-2" style="font-size: 0.9rem;">
+                    <i class="fa-solid fa-arrow-right-from-bracket me-2"></i>Cerrar Sesión
+                </a>
+            </div>
+        </div>
+
+        <div class="content-container">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="fa-solid fa-wallet text-primary me-2"></i>Mis Recibos de Nómina
+                    </h1>
+                    <p class="text-muted mb-0">Historial de pagos y comprobantes digitales fiscales del trabajador.</p>
+                </div>
+            </div>
+
+            <div class="card card-nomina border-0 mb-4">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Periodo de Pago</th>
+                                    <th>Fecha de Depósito</th>
+                                    <th>Días Trabajados</th>
+                                    <th class="text-end">Sueldo Neto</th>
+                                    <th class="text-center">Descargas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:if="${#lists.isEmpty(recibos)}">
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-folder-open fa-2x mb-2 d-block"></i>
+                                        Aún no tienes recibos de nómina registrados.
+                                    </td>
+                                </tr>
+                                
+                                <tr th:each="recibo : ${recibos}">
+                                    <td>
+                                        <strong th:text="${recibo.periodoPago}">Primera Quincena Junio 2026</strong>
+                                    </td>
+                                    <td th:text="${#temporals.format(recibo.fechaPago, 'dd/MM/yyyy')}">25/06/2026</td>
+                                    <td th:text="${recibo.diasTrabajados} + ' días'">15 días</td>
+                                    <td class="text-end fw-bold text-success" 
+                                        th:text="'$' + ${#numbers.formatDecimal(recibo.sueldoNeto, 1, 'COMMA', 2, 'POINT')}">
+                                        $0.00
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a th:href="@{/operaciones/nominas/descargar/pdf/{id}(id=${recibo.id})}" 
+                                               class="btn btn-sm btn-outline-danger" 
+                                               title="Descargar PDF">
+                                                <i class="fa-solid fa-file-pdf"></i> PDF
+                                            </a>
+                                            
+                                            <a th:href="@{/operaciones/nominas/descargar/xml/{id}(id=${recibo.id})}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="Descargar XML">
+                                                <i class="fa-solid fa-file-code"></i> XML
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
