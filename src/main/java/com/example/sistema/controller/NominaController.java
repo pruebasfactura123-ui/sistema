@@ -41,8 +41,9 @@ public class NominaController {
     private AuditoriaRepository auditoriaRepository;
 
     /**
-     * Muestra el historial de nóminas y el formulario filtrado por la empresa del usuario activo
-     */
+     * COMENTADO PARA EVITAR CONFLICTO DE MAPEO AMBIGUO
+     * Esta lógica ahora es administrada dinámicamente por NominaTrabajadorController.java
+     *
     @GetMapping("/nominas")
     public String listarNominas(Model model, Authentication authentication) {
         if (authentication == null) {
@@ -85,6 +86,7 @@ public class NominaController {
         
         return "nominas"; 
     }
+    */
 
     /**
      * Procesar el registro seguro de un recibo de nómina validando la pertenencia de empresa

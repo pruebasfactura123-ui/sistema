@@ -1,7 +1,11 @@
 package com.example.sistema.controller;
 
+import com.example.sistema.model.Nomina;
 import com.example.sistema.model.ReciboNomina;
+import com.example.sistema.model.Usuario;
+import com.example.sistema.repository.NominaRepository;
 import com.example.sistema.repository.ReciboNominaRepository;
+import com.example.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -21,29 +25,61 @@ public class NominaTrabajadorController {
     @Autowired
     private ReciboNominaRepository reciboNominaRepository;
 
-    // RUTA INTELIGENTE UNIFICADA
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private NominaRepository nominaRepository;
+
+    // RUTA INTELIGENTE UNIFICADA (Resuelve el mapeo ambiguo)
     @GetMapping("/operaciones/nominas")
     public String verNominas(Model model, Authentication authentication) {
-        String username = authentication.getName();
-        
-        // Verificamos si el usuario en sesión tiene rol de Jefe o Gerente
+        if (authentication == null) {
+            return "redirect:/login";
+        }
+
+        String usernameActivo = authentication.getName();
+        Usuario usuarioLogueado = usuarioRepository.findByUsername(usernameActivo).orElse(null);
+
+        if (usuarioLogueado == null) {
+            return "redirect:/login";
+        }
+
+        // Verificamos si el usuario tiene rol administrativo (JEFE o GERENTE)
         boolean esJefe = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_JEFE") || a.getAuthority().equals("ROLE_GERENTE"));
+                .anyMatch(a -> a.getAuthority().equals("ROLE_JEFE") || a.getAuthority().equals("ROLE_GERENTE") || usuarioLogueado.getRol().equals("JEFE") || usuarioLogueado.getRol().equals("GERENTE"));
 
         if (esJefe) {
-            // 1. SI ES JEFE: Lo mandamos a tu archivo original 'nominas.html'
-            // Nota: Aquí puedes agregar las listas que ya le pasabas a esa pantalla antes si las necesitas
-            return "nominas"; 
+            // ==========================================
+            // 1. VISTA DEL JEFE (Lógica original de tu NominaController)
+            // ==========================================
+            Long empresaId = usuarioLogueado.getEmpresa().getId();
+            List<Nomina> nominas = nominaRepository.findByTrabajadorEmpresaIdOrderByFechaEmisionDesc(empresaId);
+            List<Usuario> trabajadores = usuarioRepository.findByEmpresaId(empresaId);
+
+            model.addAttribute("nominas", nominas);
+            model.addAttribute("trabajadores", trabajadores);
+            
+            String nombreEmpresa = "OFICINA FISCAL";
+            if (usuarioLogueado.getEmpresa() != null && usuarioLogueado.getEmpresa().getRazonSocial() != null) {
+                nombreEmpresa = usuarioLogueado.getEmpresa().getRazonSocial();
+            }
+            model.addAttribute("empresaNombre", nombreEmpresa);
+            
+            return "nominas"; // Muestra el panel administrativo (Tu foto 1)
+            
         } else {
-            // 2. SI ES TRABAJADOR: Lo mandamos al nuevo 'mis-nominas.html'
-            List<ReciboNomina> misRecibos = reciboNominaRepository.findByUsuarioUsernameOrderByFechaPagoDesc(username);
+            // ==========================================
+            // 2. VISTA DEL TRABAJADOR
+            // ==========================================
+            List<ReciboNomina> misRecibos = reciboNominaRepository.findByUsuarioUsernameOrderByFechaPagoDesc(usernameActivo);
             model.addAttribute("recibos", misRecibos);
             
-            return "mis-nominas"; 
+            return "mis-nominas"; // Muestra la tabla sencilla de descargas (Tu foto 2)
         }
     }
 
-    // Ruta para descargar el PDF
+    // Rutas de descarga para el empleado regular
     @GetMapping("/operaciones/nominas/descargar/pdf/{id}")
     @ResponseBody
     public ResponseEntity<byte[]> descargarPdf(@PathVariable Long id) {
@@ -58,7 +94,6 @@ public class NominaTrabajadorController {
                 .body(documentoBytes);
     }
 
-    // Ruta para descargar el XML
     @GetMapping("/operaciones/nominas/descargar/xml/{id}")
     @ResponseBody
     public ResponseEntity<byte[]> descargarXml(@PathVariable Long id) {
