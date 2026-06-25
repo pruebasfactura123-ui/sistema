@@ -81,7 +81,7 @@ public class NominaController {
         if (usuarioLogueado.getEmpresa() != null && usuarioLogueado.getEmpresa().getRazonSocial() != null) {
             nombreEmpresa = usuarioLogueado.getEmpresa().getRazonSocial();
         }
-        model.addAttribute("empresaNombre", nombreEmpresa + " (Nóminas)");
+        model.addAttribute("empresaNombre", nombreEmpresa);
         
         return "nominas"; 
     }

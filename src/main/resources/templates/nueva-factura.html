@@ -29,6 +29,13 @@
         .table-invoice thead th { background: #0f172a; color: #ffffff; font-size: 0.7rem; font-weight: 600; padding: 6px 8px; text-transform: uppercase; border: 1px solid #1e293b; }
         .table-invoice tbody td { padding: 6px 8px; border: 1px solid #e2e8f0; font-size: 0.75rem; }
         .totals-box { border: 1px solid #b8c2cc; border-radius: 5px; padding: 12px; background: #f8fafc; }
+        
+        /* Estilos añadidos para el componente de perfil visual */
+        .user-profile-box { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 8px; text-decoration: none; color: #ffffff; border-radius: 8px; }
+        .user-profile-box:hover { background: rgba(255,255,255,0.05); color: #ffffff; }
+        .avatar-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #cbd5e1; }
+        .status-dot { width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .status-text { font-size: 0.62rem; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -44,7 +51,7 @@
             <a th:href="@{/facturas/historial}" class="nav-link"><i class="fas fa-history"></i> Historial Facturas</a>
             
             <a th:href="@{/operaciones/impuestos}" class="nav-link"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
-            <a th:href="@{/operaciones/declaraciones}" class="nav-link"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
+            <a th:href="@{/operaciones/declaraciones}$" class="nav-link"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
             <a th:href="@{/operaciones/nominas}" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Nóminas / Sueldos</a>
             
             <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')">
@@ -55,10 +62,20 @@
                 <a th:href="@{/operaciones/auditoria}" class="nav-link"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
             </div>
         </nav>
-        <div class="mt-auto border-top pt-2 border-secondary">
-            <a th:href="@{/perfil}" class="nav-link mb-1"><i class="fas fa-user-circle"></i> Mi Perfil</a>
+        
+        <div class="mt-auto border-top pt-3 border-secondary">
+            <a th:href="@{/perfil}" class="user-profile-box">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" class="avatar-img" alt="User Avatar">
+                <div>
+                    <div class="fw-bold" style="font-size: 0.78rem; line-height: 1.2;" sec:authentication="name">Username</div>
+                    <div class="d-flex align-items-center" style="line-height: 1;">
+                        <span class="status-dot"></span>
+                        <span class="status-text">ONLINE</span>
+                    </div>
+                </div>
+            </a>
             <form th:action="@{/logout}" method="post">
-                <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 w-100 text-start ps-2" style="font-size: 0.75rem;">
+                <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 w-100 text-start ps-2 mt-1" style="font-size: 0.75rem;">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </button>
             </form>
@@ -188,7 +205,7 @@
                         <div>
                             <p class="m-0 fw-bold text-dark">Código QR SAT | Certificación Certificada</p>
                             <p class="text-muted m-0">
-                                * Este documento es una representación visual para la generación de un CFDI a través del PAC autorizado Facturapi.<br>
+                                * Este documento es una representation visual para la generación de un CFDI a través del PAC autorizado Facturapi.<br>
                                 * Al dar clic en "Sellar y Descargar CFDI", los sellos digitales serán estampados y validados por el SAT.
                             </p>
                             <div class="mt-1 font-monospace text-muted" style="font-size: 0.58rem;">Sello Digital Sandbox: Activo y listo.</div>
@@ -244,7 +261,6 @@
             const cantidadInput = document.getElementById('inputCantidad').value.trim();
             const precioInput = document.getElementById('inputPrecio').value.trim();
 
-            // Validación estricta: todos los campos deben estar rellenos y ser válidos
             if (!descripcion || cantidadInput === '' || precioInput === '') {
                 alert('Por favor, rellenar todos los campos del concepto (Descripción, Cantidad y Valor Unitario).');
                 return;
@@ -268,7 +284,6 @@
 
             actualizarTabla();
             
-            // Limpia los campos tras añadir con éxito
             document.getElementById('inputDescripcion').value = '';
             document.getElementById('inputCantidad').value = '';
             document.getElementById('inputPrecio').value = '';
@@ -374,7 +389,6 @@
                     alert('¡CFDI Certificado con éxito por el SAT!\nUUID: ' + data.uuid);
                     
                     const idFactura = data.id ? data.id : data.uuid;
-                    
                     window.location.href = '/descargar-pdf/' + idFactura;
                     
                     setTimeout(() => {

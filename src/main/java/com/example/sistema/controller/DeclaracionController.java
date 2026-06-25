@@ -54,6 +54,7 @@ public class DeclaracionController {
             
             Empresa emp = new Empresa();
             emp.setId(1L); // <--- CAMBIA ESTE '1' por el ID de empresa que quieras testear con tu admin
+            emp.setRazonSocial("Empresa de Prueba (Admin)");
             adminFicticio.setEmpresa(emp);
             return adminFicticio;
         }
@@ -84,11 +85,20 @@ public class DeclaracionController {
                 List<Declaracion> declaraciones = declaracionRepository.findByEmpresaIdOrderByAnioDescMesDesc(empresaId);
                 
                 model.addAttribute("declaraciones", declaraciones);
-                model.addAttribute("empresaNombre", "OFICINA FISCAL (Declaraciones)");
+                
+                // ASIGNACIÓN DINÁMICA: Si es el admin de pruebas usa el texto genérico, si no, extrae la Razón Social real.
+                if ("admin".equalsIgnoreCase(logueado.getUsername())) {
+                    model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+                } else {
+                    // Si el objeto Empresa tiene el atributo 'getRazonSocial()', usamos ese. 
+                    // Si en tu modelo se llama 'getNombre()', cámbialo aquí abajo:
+                    model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("declaraciones", new ArrayList<>());
+            model.addAttribute("empresaNombre", "Error al cargar empresa");
         }
 
         return "declaraciones"; 
