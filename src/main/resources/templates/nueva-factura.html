@@ -65,18 +65,19 @@
             </div>
         </nav>
         
-        <div class="mt-auto border-top pt-3 border-secondary">
-            <a th:href="@{/perfil}" class="user-profile-box">
-                <img th:src="${usuarioLogueado != null ? usuarioLogueado.fotoUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'}" class="avatar-img" alt="User Avatar">
-                <div>
-                    <div class="fw-bold" style="font-size: 0.75rem; line-height: 1.2;" 
-                         th:text="${usuarioLogueado != null ? usuarioLogueado.nombre : #authentication.name}">Username</div>
-                    <div class="d-flex align-items-center" style="line-height: 1;">
-                        <span class="status-dot"></span>
-                        <span class="status-text">ONLINE</span>
-                    </div>
-                </div>
-            </a>
+       <a th:href="@{/perfil}" class="user-profile-box">
+    <img th:src="${usuarioLogueado != null ? usuarioLogueado.fotoUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'}" class="avatar-img" alt="User Avatar">
+    <div>
+        <div th:if="${usuarioLogueado != null}" class="fw-bold" style="font-size: 0.75rem; line-height: 1.2;" th:text="${usuarioLogueado.nombre}">Nombre</div>
+        
+        <div th:unless="${usuarioLogueado != null}" class="fw-bold" style="font-size: 0.75rem; line-height: 1.2;" sec:authentication="name">Username</div>
+        
+        <div class="d-flex align-items-center" style="line-height: 1;">
+            <span class="status-dot"></span>
+            <span class="status-text">ONLINE</span>
+        </div>
+    </div>
+</a>
             <form th:action="@{/logout}" method="post">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
                 <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 w-100 text-start ps-2 mt-1" style="font-size: 0.72rem;">
