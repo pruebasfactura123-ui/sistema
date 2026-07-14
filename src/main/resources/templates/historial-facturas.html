@@ -79,17 +79,23 @@
             gap: 12px;
         }
         .sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
-        .sidebar-user .user-info { color: white; font-weight: 500; font-size: 0.75rem; }
-        .sidebar-user .user-status { font-size: 0.55rem; color: #10b981; display: block; font-weight: bold; }
+        .sidebar-user .user-info { color: white; font-weight: 500; font-size: 0.75rem; display: flex; flex-direction: column; }
+        .sidebar-user .user-status { font-size: 0.55rem; color: #10b981; display: block; font-weight: bold; margin-top: 2px; }
         
+        /* Botón de Logout Corregido */
         .btn-logout { 
             color: #ef4444 !important; 
             font-size: 0.75rem !important; 
-            border-top: 1px solid rgba(255,255,255,0.05);
             background: none;
             border: none;
             width: 100%;
             text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-logout:hover {
+            background: rgba(239, 68, 68, 0.08) !important;
+            color: #f87171 !important;
         }
 
         /* Contenedor Principal */
@@ -101,7 +107,7 @@
         
         .card-custom { background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.01); }
         
-        /* Tablas modernas */
+        /* Tablas */
         .table thead th { background: #f8fafc; color: var(--text-muted); font-size: 0.65rem; border: none; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; padding: 12px; }
         .table tbody td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; }
         
@@ -166,15 +172,19 @@
                     <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
                         <img th:src="${usuarioLogueado != null ? usuarioLogueado.fotoUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop'}" alt="User Profile">
                         <div class="user-info">
-                            <span sec:authentication="name">luissaid</span>
+                            <span class="text-white" th:text="${usuarioLogueado != null ? usuarioLogueado.nombre : #authentication.name}">Nombre de Usuario</span>
                             <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>
                         </div>
                     </div>
                 </a>
+                
                 <div class="sidebar-item">
-                    <form th:action="@{/logout}" method="post" class="m-0">
+                    <form th:action="@{/logout}" method="post" class="m-0 w-100">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
-                        <button type="submit" class="btn-logout sidebar-item"><i class="fas fa-sign-out-alt me-2" style="width: 20px;"></i>Cerrar Sesión</button>
+                        <button type="submit" class="btn-logout" style="padding: 10px 24px; display: flex; align-items: center;">
+                            <i class="fas fa-sign-out-alt me-2" style="width: 20px;"></i>
+                            <span>Cerrar Sesión</span>
+                        </button>
                     </form>
                 </div>
             </div>
@@ -223,18 +233,14 @@
                                 <td class="text-end font-monospace fw-bold text-dark" th:text="'$' + ${#numbers.formatDecimal(f.total ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center gap-1">
-                                        <a th:href="@{/descargar/{id}(id=${f.id})}" 
-                                           class="btn btn-sm btn-light text-primary border" style="padding: 2px 6px; font-size: 0.65rem;" title="Descargar XML">
+                                        <a th:href="@{/descargar/{id}(id=${f.id})}" class="btn btn-sm btn-light text-primary border" style="padding: 2px 6px; font-size: 0.65rem;" title="Descargar XML">
                                              <i class="fas fa-download"></i>
                                         </a>
-                                        <a th:href="@{/descargar-pdf/{id}(id=${f.id})}" 
-                                           target="_blank"
-                                           class="btn btn-sm btn-light text-danger border" style="padding: 2px 6px; font-size: 0.65rem;" title="Ver PDF">
+                                        <a th:href="@{/descargar-pdf/{id}(id=${f.id})}" target="_blank" class="btn btn-sm btn-light text-danger border" style="padding: 2px 6px; font-size: 0.65rem;" title="Ver PDF">
                                              <i class="fas fa-file-pdf"></i>
                                         </a>
-                                        <button type="button" class="btn btn-sm btn-light text-success border btn-editar-factura" 
-                                                th:data-id="${f.id}" style="padding: 2px 6px; font-size: 0.65rem;" title="Editar Factura">
-                                            <i class="fas fa-pencil-alt"></i>
+                                        <button type="button" class="btn btn-sm btn-light text-success border btn-editar-factura" th:data-id="${f.id}" style="padding: 2px 6px; font-size: 0.65rem;" title="Editar Factura">
+                                             <i class="fas fa-pencil-alt"></i>
                                         </button>
                                         <form th:action="@{/borrar/{id}(id=${f.id})}" method="post" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este registro de factura?');" style="display:inline;">
                                             <button type="submit" class="btn btn-sm btn-light text-danger border" style="padding: 2px 6px; font-size: 0.65rem;" title="Eliminar">
@@ -333,7 +339,6 @@
                             document.getElementById('editRfcCliente').value = data.rfcCliente;
                             document.getElementById('editTotal').value = data.total;
                             document.getElementById('editTipo').value = data.tipo;
-                            
                             modalEditar.show();
                         })
                         .catch(err => {
