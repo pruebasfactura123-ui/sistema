@@ -16,7 +16,7 @@
         body { 
             background: var(--bg); 
             font-family: 'DM Sans', sans-serif; 
-            font-size: 0.75rem; 
+            font-size: 0.9rem; 
             color: #1e293b; 
             margin: 0;
             padding: 0;
@@ -32,20 +32,20 @@
             left: 0; 
             display: flex; 
             flex-direction: column; 
-            padding: 20px 0 0 0; 
+            padding: 25px 0 0 0; 
             z-index: 1000;
         }
         .sidebar-brand { 
-            padding: 0 24px 20px 24px; 
-            font-size: 0.95rem; 
+            padding: 0 24px 25px 24px; 
+            font-size: 1.15rem; 
             font-weight: bold; 
             color: white; 
             border-bottom: 1px solid var(--border);
             letter-spacing: 0.5px;
         }
         .sidebar-header { 
-            padding: 15px 24px 5px 24px; 
-            font-size: 0.55rem; 
+            padding: 20px 24px 8px 24px; 
+            font-size: 0.70rem; 
             font-weight: bold; 
             text-transform: uppercase; 
             color: #64748b; 
@@ -55,48 +55,61 @@
         .sidebar-item a { 
             display: flex; 
             align-items: center; 
-            padding: 10px 24px; 
+            padding: 12px 24px; 
             color: #94a3b8; 
             text-decoration: none; 
-            font-size: 0.75rem; 
+            font-size: 0.95rem; 
             transition: all 0.2s ease;
         }
-        .sidebar-item a i { width: 20px; font-size: 0.85rem; margin-right: 10px; }
-        .sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
-        .sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
-        
-        /* Sección de Perfil / Footer del Sidebar */
-        .sidebar-footer {
-            margin-top: auto;
-            border-top: 1px solid var(--border);
-            background-color: rgba(0, 0, 0, 0.1);
-        }
-        .sidebar-user {
-            padding: 15px 24px 10px 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
-        .sidebar-user .user-info { color: white; font-weight: 500; font-size: 0.75rem; }
-        .sidebar-user .user-status { font-size: 0.55rem; color: #10b981; display: block; font-weight: bold; }
-        
-        .btn-logout { 
-            color: #ef4444 !important; 
-            font-size: 0.75rem !important; 
-            border-top: 1px solid rgba(255,255,255,0.05);
-            background: none;
-            border: none;
-            width: 100%;
-            text-align: left;
-        }
+       .sidebar-item a i { 
+    width: 20px; 
+    font-size: 1.05rem; /* CAMBIADO: De 0.85rem a 1.05rem para emparejar con el texto */
+    margin-right: 12px; /* CAMBIADO: De 10px a 12px */
+}
+.sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
+.sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
 
-        /* Contenedor Principal */
-        .main-content { 
-            margin-left: var(--sidebar-width); 
-            flex-grow: 1; 
-            padding: 30px; 
-        }
+/* Sección de Perfil / Footer del Sidebar */
+.sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    background-color: rgba(0, 0, 0, 0.1);
+}
+.sidebar-user {
+    padding: 18px 24px 15px 24px; /* CAMBIADO: Ligeramente más espaciado */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+.sidebar-user .user-info { 
+    color: white; 
+    font-weight: 500; 
+    font-size: 0.85rem; /* CAMBIADO: De 0.75rem a 0.85rem */
+}
+.sidebar-user .user-status { 
+    font-size: 0.65rem; /* CAMBIADO: De 0.55rem a 0.65rem */
+    color: #10b981; 
+    display: block; 
+    font-weight: bold; 
+}
+
+.btn-logout { 
+    color: #ef4444 !important; 
+    font-size: 0.85rem !important; /* CAMBIADO: De 0.75rem a 0.85rem */
+    border-top: 1px solid rgba(255,255,255,0.05);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+}
+
+/* Contenedor Principal */
+.main-content { 
+    margin-left: var(--sidebar-width); 
+    flex-grow: 1; 
+    padding: 40px; /* CAMBIADO: De 30px a 40px para que el contenido "respire" más */
+}
         .card-custom { background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.01); }
         
         /* Tablas */
