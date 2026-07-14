@@ -65,10 +65,10 @@
             </div>
         </nav>
         
-      <a th:href="@{/perfil}" class="user-profile-box">
+     <a th:href="@{/perfil}" class="user-profile-box">
     <img th:src="${usuarioLogueado != null ? usuarioLogueado.fotoUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'}" class="avatar-img" alt="User Avatar">
     <div>
-        <div th:if="${usuarioLogueado != null}" class="fw-bold" style="font-size: 0.75rem; line-height: 1.2;" th:text="${usuarioLogueado?.nombre}">Nombre</div>
+        <div th:if="${usuarioLogueado != null}" class="fw-bold" style="font-size: 0.75rem; line-height: 1.2;" th:text="${usuarioLogueado?.username}">Username</div>
         
         <div th:unless="${usuarioLogueado != null}" class="fw-bold" style="font-size: 0.75rem; line-height: 1.2;" sec:authentication="name">Username</div>
         
