@@ -172,7 +172,9 @@
                     <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
                         <img th:src="${usuarioLogueado != null ? usuarioLogueado.fotoUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop'}" alt="User Profile">
                         <div class="user-info">
-                            <span class="text-white" th:text="${usuarioLogueado != null ? usuarioLogueado.nombre : #authentication.name}">Nombre de Usuario</span>
+                            <!-- Si el usuario existe (Trabajador/Gerente), muestra su nombre de forma segura -->
+                            <span th:if="${usuarioLogueado != null}" class="text-white" th:text="${usuarioLogueado?.nombre}">Nombre de Usuario</span>
+                            <span th:unless="${usuarioLogueado != null}" class="text-white" sec:authentication="name">Username</span>
                             <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>
                         </div>
                     </div>
