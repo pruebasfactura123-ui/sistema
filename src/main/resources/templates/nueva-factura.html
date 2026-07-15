@@ -184,7 +184,7 @@
 <body>
 
     <aside class="sidebar">
-        <h4 sec:authorize="hasAnyAuthority('JEFE', 'ROLE_JEFE') or hasAnyRole('JEFE')" th:text="${empresaNombre}">EMPRESA</h4>
+        <h4 sec:authorize="hasAnyAuthority('JEFE', 'ROLE_JEFE') or hasAnyRole('JEFE')" th:text="${empresaNombre ?: 'Sistema Contable'}">EMPRESA</h4>
         <h4 sec:authorize="!hasAnyAuthority('JEFE', 'ROLE_JEFE') and !hasAnyRole('JEFE')">OFICINA FISCAL</h4>
 
         <nav class="nav flex-column flex-grow-1">
@@ -196,7 +196,7 @@
             <a th:href="@{/facturas/historial}" class="nav-link"><i class="fas fa-history"></i> Historial Facturas</a>
             
             <a th:href="@{/operaciones/impuestos}" class="nav-link"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
-            <a th:href="@{/operaciones/declaraciones}" class="nav-link"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
+            <a th:href="@{/operaciones/declaraciones readiness}"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
             <a th:href="@{/operaciones/nominas}" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Nóminas / Sueldos</a>
             
             <div sec:authorize="hasAnyAuthority('JEFE', 'GERENTE') or hasAnyRole('JEFE', 'GERENTE')">
@@ -239,7 +239,7 @@
                         <div>
                             <h5 sec:authorize="hasAnyAuthority('JEFE', 'ROLE_JEFE') or hasAnyRole('JEFE')" 
                                 class="fw-bold m-0 text-dark" style="font-size: 1.2rem;"    
-                                th:text="${empresaNombre}">EMPRESA</h5>
+                                th:text="${empresaNombre ?: 'Sistema Contable'}">EMPRESA</h5>
         
                             <h5 sec:authorize="!hasAnyAuthority('JEFE', 'ROLE_JEFE') and !hasAnyRole('JEFE')" 
                                 class="fw-bold m-0 text-dark" style="font-size: 1.2rem;">OFICINA FISCAL</h5>
@@ -357,7 +357,7 @@
                         <div>
                             <p class="m-0 fw-bold text-dark" style="font-size: 0.80rem;">Código QR SAT | Certificación Certificada</p>
                             <p class="text-muted m-0">
-                                * Este documento es una representación visual para la generación de un CFDI a través del PAC autorizado Facturapi.<br>
+                                * Este documento es una representation visual para la generación de un CFDI a través del PAC autorizado Facturapi.<br>
                                 * Al dar clic en "Sellar y Descargar CFDI", los sellos digitales serán estampados y validados por el SAT.
                             </p>
                             <div class="mt-1 font-monospace text-muted" style="font-size: 0.70rem;">Sello Digital Sandbox: Activo y listo.</div>
