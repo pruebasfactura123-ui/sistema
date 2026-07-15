@@ -197,8 +197,8 @@
 <body>
 
     <aside class="sidebar">
-     <h4 sec:authorize="hasAnyAuthority('JEFE') or hasAnyRole('JEFE')" th:text="${empresaNombre ?: 'OFICINA FISCAL'}">EMPRESA</h4>
-     <h4 sec:authorize="!hasAnyAuthority('JEFE') and !hasAnyRole('JEFE')">OFICINA FISCAL</h4>
+    <h4 th:if="${usuarioLogueado != null && usuarioLogueado.rol == 'JEFE'}" th:text="${empresaNombre}">EMPRESA</h4>
+    <h4 th:unless="${usuarioLogueado != null && usuarioLogueado.rol == 'JEFE'}">OFICINA FISCAL</h4>
 
         <nav class="nav flex-column flex-grow-1">
             <a th:href="@{/}" class="nav-link"><i class="fas fa-chart-pie"></i> Inicio</a>
@@ -250,8 +250,12 @@
                             <i class="fas fa-building fa-2x text-dark"></i>
                         </div>
                         <div>
-                           <h5 sec:authorize="hasAnyAuthority('JEFE') or hasAnyRole('JEFE')" class="fw-bold m-0 text-dark" style="font-size: 1.2rem;" th:text="${empresaNombre ?: 'OFICINA FISCAL'}">EMPRESA</h5>
-                            <h5 sec:authorize="!hasAnyAuthority('JEFE') and !hasAnyRole('JEFE')" class="fw-bold m-0 text-dark" style="font-size: 1.2rem;">OFICINA FISCAL</h5>
+                        <h5 th:if="${usuarioLogueado != null && usuarioLogueado.rol == 'JEFE'}" 
+                            class="fw-bold m-0 text-dark" style="font-size: 1.2rem;"     
+                            th:text="${empresaNombre}">EMPRESA</h5>
+    
+                        <h5 th:unless="${usuarioLogueado != null && usuarioLogueado.rol == 'JEFE'}" 
+                            class="fw-bold m-0 text-dark" style="font-size: 1.2rem;">OFICINA FISCAL</h5>
 
                             <p class="m-0 text-secondary" style="font-size: 0.80rem; font-weight: 500;">General de Ley Personas Morales (601)</p>
                             <p class="m-0 text-muted" style="font-size: 0.78rem;">Lugar de Emisión: 06470, Ciudad de México, México</p>
