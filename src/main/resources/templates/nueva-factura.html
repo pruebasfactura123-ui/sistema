@@ -184,8 +184,8 @@
 <body>
 
     <aside class="sidebar">
-       <!-- CORRECCIÓN 1: Filtra el texto 'OFICINA FISCAL' en el Sidebar -->
-       <h4 th:text="${empresaNombre != null and empresaNombre != 'OFICINA FISCAL' ? empresaNombre : 'Luis Said Gil Páez S.A de C.V'}">Luis Said Gil Páez S.A de C.V</h4>
+        <!-- 100% DINÁMICO: Toma el nombre exacto enviado desde la variable empresaNombre -->
+        <h4 th:text="${empresaNombre ?: 'Sistema Contable'}">Sistema Contable</h4>
 
         <nav class="nav flex-column flex-grow-1">
             <a th:href="@{/}" class="nav-link"><i class="fas fa-chart-pie"></i> Inicio</a>
@@ -237,9 +237,9 @@
                             <i class="fas fa-building fa-2x text-dark"></i>
                         </div>
                         <div>
-                            <!-- CORRECCIÓN 2: Filtra el texto 'OFICINA FISCAL' en el encabezado del CFDI -->
+                            <!-- 100% DINÁMICO: Razón Social del emisor tomada desde el backend -->
                             <h5 class="fw-bold m-0 text-dark" style="font-size: 1.2rem;" 
-                                th:text="${empresaNombre != null and empresaNombre != 'OFICINA FISCAL' ? empresaNombre : 'Luis Said Gil Páez S.A de C.V'}">Luis Said Gil Páez S.A de C.V</h5>
+                                th:text="${empresaNombre ?: 'Sistema Contable'}">Sistema Contable</h5>
 
                             <p class="m-0 text-secondary" style="font-size: 0.80rem; font-weight: 500;">General de Ley Personas Morales (601)</p>
                             <p class="m-0 text-muted" style="font-size: 0.78rem;">Lugar de Emisión: 06470, Ciudad de México, México</p>
