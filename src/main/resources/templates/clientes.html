@@ -125,8 +125,8 @@
     <div class="d-flex">
         <div class="sidebar">
             <div class="sidebar-brand">
-                <!-- BLINDAJE DINÁMICO: Prioriza empresaNombre, si falla usa el usuario logueado o valor por defecto -->
-                <span th:text="${empresaNombre != null ? empresaNombre : (usuarioLogueado != null and usuarioLogueado.empresa != null ? usuarioLogueado.empresa.razonSocial : 'Sistema Contable')}">Sistema Contable</span>
+                <!-- FORZAMOS A OBTENER EL NOMBRE DESDE LA ENTIDAD EN SESIÓN O USUARIOLOGUEADO -->
+                <span th:text="${usuarioLogueado != null and usuarioLogueado.empresa != null ? usuarioLogueado.empresa.razonSocial : (#authentication.principal != 'anonymousUser' and #authentication.principal.usuario != null and #authentication.principal.usuario.empresa != null ? #authentication.principal.usuario.empresa.razonSocial : (empresaNombre != null and empresaNombre != 'OFICINA FISCAL' ? empresaNombre : 'Sistema Contable'))}">Sistema Contable</span>
             </div>
             
             <ul class="sidebar-menu mt-2">
