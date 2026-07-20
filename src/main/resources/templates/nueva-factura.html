@@ -184,8 +184,7 @@
 <body>
 
     <aside class="sidebar">
-        <h4 sec:authorize="hasAnyAuthority('JEFE', 'ROLE_JEFE') or hasAnyRole('JEFE')" th:text="${empresaNombre ?: 'Sistema Contable'}">EMPRESA</h4>
-        <h4 sec:authorize="!hasAnyAuthority('JEFE', 'ROLE_JEFE') and !hasAnyRole('JEFE')">OFICINA FISCAL</h4>
+       <h4 th:text="${empresaNombre ?: 'Sistema Contable'}">EMPRESA</h4>
 
         <nav class="nav flex-column flex-grow-1">
             <a th:href="@{/}" class="nav-link"><i class="fas fa-chart-pie"></i> Inicio</a>
