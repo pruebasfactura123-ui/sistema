@@ -20,17 +20,15 @@ public class GlobalControllerAdvice {
             try {
                 String username = authentication.getName();
 
-                // Si entras con el admin VIP
                 if ("admin".equalsIgnoreCase(username)) {
                     model.addAttribute("empresaNombre", "SISTEMA ADMINISTRADOR");
                     return;
                 }
 
-                // Busca al trabajador o jefe en la BD por su username
+                // Busca al usuario (Jefe o Trabajador)
                 Usuario usuario = usuarioRepository.findByUsername(username).orElse(null);
 
                 if (usuario != null && usuario.getEmpresa() != null) {
-                    // Inyecta la Razón Social real de la empresa del trabajador
                     model.addAttribute("empresaNombre", usuario.getEmpresa().getRazonSocial());
                 } else {
                     model.addAttribute("empresaNombre", "OFICINA FISCAL");
