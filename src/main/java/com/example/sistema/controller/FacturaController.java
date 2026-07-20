@@ -174,11 +174,8 @@ public class FacturaController {
             model.addAttribute("totalNeto", ingresos - egresos); 
             model.addAttribute("xmlProcesados", comprobantesXml.size());
             
-            if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
-                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            } else {
-                model.addAttribute("empresaNombre", "OFICINA FISCAL");
-            }
+            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
+            model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) { 
             e.printStackTrace();
@@ -203,11 +200,9 @@ public class FacturaController {
             model.addAttribute("clientes", listaClientes);
             model.addAttribute("empresaRfc", logueado.getEmpresa().getRfc());
             
-            if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
-                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            } else {
-                model.addAttribute("empresaNombre", "OFICINA FISCAL");
-            }
+            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
+            model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+            
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("clientes", new ArrayList<>());
@@ -415,11 +410,9 @@ public class FacturaController {
             model.addAttribute("usuarioLogueado", logueado);
             model.addAttribute("facturas", facturasManuales);
             
-            if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
-                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            } else {
-                model.addAttribute("empresaNombre", "OFICINA FISCAL");
-            }
+            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
+            model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+            
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("facturas", new ArrayList<>());
@@ -445,7 +438,7 @@ public class FacturaController {
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
                             + " con RFC: " + nuevoCliente.getRfc();
-                                                                 
+                                                                                        
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
@@ -459,11 +452,10 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             model.addAttribute("usuarios", usuarioRepository.findByEmpresaId(logueado.getEmpresa().getId()));
             model.addAttribute("usuarioLogueado", logueado); 
-            if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
-                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            } else {
-                model.addAttribute("empresaNombre", "OFICINA FISCAL");
-            }
+            
+            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
+            model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+            
         } catch (Exception e) { model.addAttribute("usuarios", new ArrayList<>()); }
         return "usuarios";
     }
@@ -513,11 +505,10 @@ public class FacturaController {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             model.addAttribute("usuario", logueado);
-            if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
-                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            } else {
-                model.addAttribute("empresaNombre", "OFICINA FISCAL");
-            }
+            
+            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
+            model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+            
         } catch (Exception e) { return "redirect:/"; }
         return "perfil";
     }
@@ -963,11 +954,9 @@ public class FacturaController {
             model.addAttribute("ivaAcreditable", egresosIva);
             model.addAttribute("balanceIva", balanceIva);
             
-            if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
-                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            } else {
-                model.addAttribute("empresaNombre", "OFICINA FISCAL");
-            }
+            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
+            model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
+            
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("balanceIva", 0.0);
