@@ -61,55 +61,55 @@
             font-size: 0.95rem; 
             transition: all 0.2s ease;
         }
-       .sidebar-item a i { 
-    width: 20px; 
-    font-size: 1.05rem; /* CAMBIADO: De 0.85rem a 1.05rem para emparejar con el texto */
-    margin-right: 12px; /* CAMBIADO: De 10px a 12px */
-}
-.sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
-.sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
+        .sidebar-item a i { 
+            width: 20px; 
+            font-size: 1.05rem; 
+            margin-right: 12px;
+        }
+        .sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
+        .sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
 
-/* Sección de Perfil / Footer del Sidebar */
-.sidebar-footer {
-    margin-top: auto;
-    border-top: 1px solid var(--border);
-    background-color: rgba(0, 0, 0, 0.1);
-}
-.sidebar-user {
-    padding: 18px 24px 15px 24px; /* CAMBIADO: Ligeramente más espaciado */
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
-.sidebar-user .user-info { 
-    color: white; 
-    font-weight: 500; 
-    font-size: 0.85rem; /* CAMBIADO: De 0.75rem a 0.85rem */
-}
-.sidebar-user .user-status { 
-    font-size: 0.65rem; /* CAMBIADO: De 0.55rem a 0.65rem */
-    color: #10b981; 
-    display: block; 
-    font-weight: bold; 
-}
+        /* Sección de Perfil / Footer del Sidebar */
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-user {
+            padding: 18px 24px 15px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+        .sidebar-user .user-info { 
+            color: white; 
+            font-weight: 500; 
+            font-size: 0.85rem;
+        }
+        .sidebar-user .user-status { 
+            font-size: 0.65rem;
+            color: #10b981; 
+            display: block; 
+            font-weight: bold; 
+        }
 
-.btn-logout { 
-    color: #ef4444 !important; 
-    font-size: 0.85rem !important; /* CAMBIADO: De 0.75rem a 0.85rem */
-    border-top: 1px solid rgba(255,255,255,0.05);
-    background: none;
-    border: none;
-    width: 100%;
-    text-align: left;
-}
+        .btn-logout { 
+            color: #ef4444 !important; 
+            font-size: 0.85rem !important;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
 
-/* Contenedor Principal */
-.main-content { 
-    margin-left: var(--sidebar-width); 
-    flex-grow: 1; 
-    padding: 40px; /* CAMBIADO: De 30px a 40px para que el contenido "respire" más */
-}
+        /* Contenedor Principal */
+        .main-content { 
+            margin-left: var(--sidebar-width); 
+            flex-grow: 1; 
+            padding: 40px;
+        }
         .card-custom { background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.01); }
         
         /* Tablas */
@@ -125,7 +125,8 @@
     <div class="d-flex">
         <div class="sidebar">
             <div class="sidebar-brand">
-                <span th:text="${empresaNombre ?: 'Sistema Contable'}">Sistema Contable</span>
+                <!-- BLINDAJE DINÁMICO: Prioriza empresaNombre, si falla usa el usuario logueado o valor por defecto -->
+                <span th:text="${empresaNombre != null ? empresaNombre : (usuarioLogueado != null and usuarioLogueado.empresa != null ? usuarioLogueado.empresa.razonSocial : 'Sistema Contable')}">Sistema Contable</span>
             </div>
             
             <ul class="sidebar-menu mt-2">
@@ -168,7 +169,7 @@
             <div class="sidebar-footer">
                 <a th:href="@{/perfil}" class="text-decoration-none" style="display: block;">
                     <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="User Profile">
+                        <img th:src="${usuarioLogueado != null and usuarioLogueado.fotoUrl != null ? usuarioLogueado.fotoUrl : 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="User Profile">
                         <div class="user-info">
                             <span sec:authentication="name">Usuario</span>
                             <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>
@@ -225,24 +226,24 @@
                 <div class="col-md-4">
                     <div class="card-custom">
                         <h6 class="fw-bold mb-3 text-navy" style="color: var(--navy);"><i class="fas fa-user-plus me-2 text-muted"></i>Nuevo Cliente</h6>
-                        <form th:action="@{/clientes/guardar}" th:object="${clienteNuevo}" method="post">
+                        <form th:action="@{/clientes/crear}" method="post">
                             <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             
                             <div class="mb-2">
                                 <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Nombre / Razón Social</label>
-                                <input type="text" th:field="*{nombre}" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem;" pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.]+$" title="Solo letras, espacios y puntos." required>
+                                <input type="text" name="nombre" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem;" pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.]+$" title="Solo letras, espacios y puntos." required>
                             </div>
                             <div class="mb-2">
                                 <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">RFC</label>
-                                <input type="text" th:field="*{rfc}" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem; text-transform: uppercase;" pattern="^[A-Za-zÑñ&]{3,4}[0-9]{6}[A-Za-z0-9]{3}$" title="Formato oficial de RFC (12 o 13 caracteres con homoclave)" required>
+                                <input type="text" name="rfc" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem; text-transform: uppercase;" pattern="^[A-Za-zÑñ&]{3,4}[0-9]{6}[A-Za-z0-9]{3}$" title="Formato oficial de RFC (12 o 13 caracteres con homoclave)" required>
                             </div>
                             <div class="mb-2">
                                 <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Teléfono</label>
-                                <input type="text" th:field="*{telefono}" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem;">
+                                <input type="text" name="telefono" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem;">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label text-muted mb-0" style="font-size: 0.65rem;">Correo Electrónico</label>
-                                <input type="email" th:field="*{correo}" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem;">
+                                <input type="email" name="correo" class="form-control form-control-sm" style="border-radius: 8px; font-size: 0.65rem;">
                             </div>
                             <button type="submit" class="btn btn-navy btn-sm w-100 fw-bold rounded-pill" style="font-size: 0.65rem; padding: 6px;">Agregar Cliente</button>
                         </form>
