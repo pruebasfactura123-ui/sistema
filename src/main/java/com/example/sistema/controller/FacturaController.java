@@ -392,7 +392,7 @@ public class FacturaController {
     }
 
     // =========================================================================
-    // 2. HISTORIAL UNIFICADO DE FACTURAS MANUALES 
+    // 2. HISTORIAL UNIFICADO DE FACTURAS (MANUALES Y XML) - CORREGIDO
     // =========================================================================
     @GetMapping("/facturas/historial")
     public String historialFacturas(Principal principal, Model model) {
@@ -400,13 +400,12 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
             
+            // Traemos todas las facturas directamente sin filtrar por "manual_"
             List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
-            List<Factura> facturasManuales = todas.stream()
-                    .filter(f -> f.getNombreArchivo() != null && f.getNombreArchivo().startsWith("manual_"))
-                    .collect(Collectors.toList());
+            if (todas == null) todas = new ArrayList<>();
             
             model.addAttribute("usuarioLogueado", logueado);
-            model.addAttribute("facturas", facturasManuales);
+            model.addAttribute("facturas", todas);
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) {
@@ -434,7 +433,7 @@ public class FacturaController {
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
                             + " con RFC: " + nuevoCliente.getRfc();
-                                                                                                        
+                                                                                                                        
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
@@ -610,7 +609,7 @@ public class FacturaController {
                             }
                         }
                     }
-                    
+
                     if (totalIva == 0.0 && f.getTotal() > subtotal) {
                         totalIva = f.getTotal() - subtotal;
                     }
