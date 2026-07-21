@@ -41,8 +41,9 @@ public class NominaController {
     private AuditoriaRepository auditoriaRepository;
 
     /**
-     * Muestra la vista principal de gestión de nóminas cargando los datos
-     * filtrados por el rol y la empresa correspondiente.
+     * RUTA UNIFICADA:
+     * - Si el usuario es JEFE, GERENTE o ADMIN -> Muestra el panel completo ("nominas").
+     * - Si el usuario es TRABAJADOR / EMPLEADO -> Muestra su vista simplificada ("mis-nominas").
      */
     @GetMapping("/nominas")
     public String listarNominas(Model model, Authentication authentication) {
@@ -57,30 +58,41 @@ public class NominaController {
             return "redirect:/login";
         }
 
-        List<Nomina> nominas;
-        List<Usuario> trabajadores;
-
-        if ("JEFE".equals(usuarioLogueado.getRol()) || "GERENTE".equals(usuarioLogueado.getRol()) || "ADMIN".equals(usuarioLogueado.getRol())) {
-            Long empresaId = (usuarioLogueado.getEmpresa() != null) ? usuarioLogueado.getEmpresa().getId() : null;
-            nominas = nominaRepository.findByTrabajadorEmpresaIdOrderByFechaEmisionDesc(empresaId);
-            trabajadores = usuarioRepository.findByEmpresaId(empresaId);
-        } else {
-            nominas = nominaRepository.findByTrabajadorOrderByFechaEmisionDesc(usuarioLogueado);
-            trabajadores = List.of(usuarioLogueado);
-        }
-
         model.addAttribute("usuarioLogueado", usuarioLogueado);
-        model.addAttribute("nominas", nominas);
-        model.addAttribute("trabajadores", trabajadores);
 
-        String nombreEmpresa = "OFICINA FISCAL";
-        if (usuarioLogueado.getEmpresa() != null && usuarioLogueado.getEmpresa().getRazonSocial() != null) {
-            nombreEmpresa = usuarioLogueado.getEmpresa().getRazonSocial();
-        }
-        model.addAttribute("empresaNombre", nombreEmpresa);
+        // Verificamos el rol del usuario (soporta prefijos ROLE_ o roles limpios en DB)
+        boolean esJefe = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_JEFE") || 
+                               a.getAuthority().equals("ROLE_GERENTE") || 
+                               a.getAuthority().equals("ROLE_ADMIN")) ||
+                "JEFE".equals(usuarioLogueado.getRol()) || 
+                "GERENTE".equals(usuarioLogueado.getRol()) || 
+                "ADMIN".equals(usuarioLogueado.getRol());
 
-        return "nominas";
+        if (esJefe) {
+            // 1. VISTA ADMINISTRATIVA
+            Long empresaId = (usuarioLogueado.getEmpresa() != null) ? usuarioLogueado.getEmpresa().getId() : null;
+            List<Nomina> nominas = nominaRepository.findByTrabajadorEmpresaIdOrderByFechaEmisionDesc(empresaId);
+            List<Usuario> trabajadores = usuarioRepository.findByEmpresaId(empresaId);
+
+            model.addAttribute("nominas", nominas);
+            model.addAttribute("trabajadores", trabajadores);
+
+            String nombreEmpresa = "OFICINA FISCAL";
+            if (usuarioLogueado.getEmpresa() != null && usuarioLogueado.getEmpresa().getRazonSocial() != null) {
+                nombreEmpresa = usuarioLogueado.getEmpresa().getRazonSocial();
+            }
+            model.addAttribute("empresaNombre", nombreEmpresa);
+
+            return "nominas"; // Carga nominas.html (Vista de gestión)
+        } else {
+            // 2. VISTA DEL TRABAJADOR REGULAR
+            List<Nomina> misNominas = nominaRepository.findByTrabajadorOrderByFechaEmisionDesc(usuarioLogueado);
+            model.addAttribute("recibos", misNominas);
+
+            return "mis-nominas"; // Carga mis-nominas.html (Vista de consulta de sus recibos)
         }
+    }
 
     /**
      * Procesar el registro seguro de un recibo de nómina validando la pertenencia de empresa
