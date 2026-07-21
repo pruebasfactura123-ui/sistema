@@ -6,111 +6,114 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-             :root { 
-    --navy: #0f172a; 
-    --bg: #f8fafc; 
-    --border: #1e293b; 
-    --sidebar-width: 260px; /* Ya estaba correcto aquí */
-    --text-muted: #64748b;
-    --accent: #3b82f6;
-}
-body { 
-    background: var(--bg); 
-    font-family: 'DM Sans', sans-serif; 
-    font-size: 0.9rem; /* CAMBIADO: De 0.75rem a 0.9rem para mejor lectura general */
-    color: #1e293b; 
-    margin: 0;
-    padding: 0;
-}
+        :root { 
+            --navy: #0f172a; 
+            --bg: #f8fafc; 
+            --border: #1e293b; 
+            --sidebar-width: 260px;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+            /* Variables de color agregadas */
+            --verde-ingreso: #10b981;
+            --rojo-egreso: #ef4444;
+        }
+        body { 
+            background: var(--bg); 
+            font-family: 'DM Sans', sans-serif; 
+            font-size: 0.9rem; 
+            color: #1e293b; 
+            margin: 0;
+            padding: 0;
+        }
 
-/* Estilos Core del Sidebar */
-.sidebar { 
-    width: var(--sidebar-width); 
-    background-color: var(--navy); 
-    min-height: 100vh; 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    display: flex; 
-    flex-direction: column; 
-    padding: 25px 0 0 0; /* CAMBIADO: De 20px a 25px para dar más aire arriba */
-    z-index: 1000;
-}
-.sidebar-brand { 
-    padding: 0 24px 25px 24px; /* CAMBIADO: De 20px a 25px de padding inferior */
-    font-size: 1.15rem; /* CAMBIADO: De 0.95rem a 1.15rem para resaltar el título */
-    font-weight: bold; 
-    color: white; 
-    border-bottom: 1px solid var(--border);
-    letter-spacing: 0.5px;
-}
-.sidebar-header { 
-    padding: 20px 24px 8px 24px; /* CAMBIADO: Espaciado más amplio */
-    font-size: 0.70rem; /* CAMBIADO: De 0.55rem a 0.70rem (ya no es microscópico) */
-    font-weight: bold; 
-    text-transform: uppercase; 
-    color: #64748b; 
-    letter-spacing: 1px;
-}
-.sidebar-menu { list-style: none; padding: 0; margin: 0; }
-.sidebar-item a { 
-    display: flex; 
-    align-items: center; 
-    padding: 12px 24px; /* CAMBIADO: De 10px a 12px de padding vertical para clics más cómodos */
-    color: #94a3b8; 
-    text-decoration: none; 
-    font-size: 0.95rem; /* CAMBIADO: De 0.75rem a 0.95rem para que se lea perfecto */
-    transition: all 0.2s ease;
-}
-.sidebar-item a i { 
-    width: 20px; 
-    font-size: 1.05rem; /* CAMBIADO: De 0.85rem a 1.05rem para emparejar con el texto */
-    margin-right: 12px; /* CAMBIADO: De 10px a 12px */
-}
-.sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
-.sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
+        /* Estilos Core del Sidebar */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--navy); 
+            min-height: 100vh; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 25px 0 0 0; 
+            z-index: 1000;
+        }
+        .sidebar-brand { 
+            padding: 0 24px 25px 24px; 
+            font-size: 1.15rem; 
+            font-weight: bold; 
+            color: white; 
+            border-bottom: 1px solid var(--border);
+            letter-spacing: 0.5px;
+        }
+        .sidebar-header { 
+            padding: 20px 24px 8px 24px; 
+            font-size: 0.70rem; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            color: #64748b; 
+            letter-spacing: 1px;
+        }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-item a { 
+            display: flex; 
+            align-items: center; 
+            padding: 12px 24px; 
+            color: #94a3b8; 
+            text-decoration: none; 
+            font-size: 0.95rem; 
+            transition: all 0.2s ease;
+        }
+        .sidebar-item a i { 
+            width: 20px; 
+            font-size: 1.05rem; 
+            margin-right: 12px; 
+        }
+        .sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
+        .sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
 
-/* Sección de Perfil / Footer del Sidebar */
-.sidebar-footer {
-    margin-top: auto;
-    border-top: 1px solid var(--border);
-    background-color: rgba(0, 0, 0, 0.1);
-}
-.sidebar-user {
-    padding: 18px 24px 15px 24px; /* CAMBIADO: Ligeramente más espaciado */
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
-.sidebar-user .user-info { 
-    color: white; 
-    font-weight: 500; 
-    font-size: 0.85rem; /* CAMBIADO: De 0.75rem a 0.85rem */
-}
-.sidebar-user .user-status { 
-    font-size: 0.65rem; /* CAMBIADO: De 0.55rem a 0.65rem */
-    color: #10b981; 
-    display: block; 
-    font-weight: bold; 
-}
+        /* Sección de Perfil / Footer del Sidebar */
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-user {
+            padding: 18px 24px 15px 24px; 
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+        .sidebar-user .user-info { 
+            color: white; 
+            font-weight: 500; 
+            font-size: 0.85rem; 
+        }
+        .sidebar-user .user-status { 
+            font-size: 0.65rem; 
+            color: #10b981; 
+            display: block; 
+            font-weight: bold; 
+        }
 
-.btn-logout { 
-    color: #ef4444 !important; 
-    font-size: 0.85rem !important; /* CAMBIADO: De 0.75rem a 0.85rem */
-    border-top: 1px solid rgba(255,255,255,0.05);
-    background: none;
-    border: none;
-    width: 100%;
-    text-align: left;
-}
+        .btn-logout { 
+            color: #ef4444 !important; 
+            font-size: 0.85rem !important; 
+            border-top: 1px solid rgba(255,255,255,0.05);
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
 
-/* Contenedor Principal */
-.main-content { 
-    margin-left: var(--sidebar-width); 
-    flex-grow: 1; 
-    padding: 40px; /* CAMBIADO: De 30px a 40px para que el contenido "respire" más */
-}
+        /* Contenedor Principal */
+        .main-content { 
+            margin-left: var(--sidebar-width); 
+            flex-grow: 1; 
+            padding: 40px; 
+        }
         
         .card-custom { background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.01); }
         
@@ -179,7 +182,6 @@ body {
                     <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
                         <img th:src="${usuarioLogueado != null ? usuarioLogueado.fotoUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop'}" alt="User Profile">
                         <div class="user-info">
-                            <!-- Si el usuario existe (Trabajador/Gerente), muestra su nombre de forma segura -->
                             <span th:if="${usuarioLogueado != null}" class="text-white" th:text="${usuarioLogueado?.username}">Nombre de Usuario</span>
                             <span th:unless="${usuarioLogueado != null}" class="text-white" sec:authentication="name">Username</span>
                             <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>
@@ -235,7 +237,7 @@ body {
                         <tbody>
                             <tr th:each="f : ${facturas}">
                                 <td class="text-muted fw-semibold" th:text="${f.fecha != null ? #temporals.format(f.fecha, 'dd/MM/yyyy') : '---'}">2026-05-14</td>
-                                <td class="fw-bold text-secondary col-filtrar" th:text="${f.rfcCliente}">USUARIO PRUEBA ESTADIA</td>
+                                <td class="fw-bold text-secondary col-filtrar" th:text="${f.nombreCliente != null ? f.nombreCliente + ' (' + f.rfcCliente + ')' : f.rfcCliente}">USUARIO PRUEBA ESTADIA</td>
                                 <td>
                                     <span th:class="${f.tipo == 'INGRESO' ? 'badge-ingreso' : 'badge-egreso'}" th:text="${f.tipo}">EGRESO</span>
                                 </td>
@@ -272,6 +274,7 @@ body {
         </div>
     </div>
 
+    <!-- Modal Editar Factura -->
     <div class="modal fade" id="modalEditarFactura" tabindex="-1" aria-labelledby="modalEditarFacturaLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content" style="border-radius: 12px; font-size: 0.7rem;">
@@ -283,7 +286,7 @@ body {
                     <div class="modal-body py-3">
                         <input type="hidden" id="editId" name="id">
                         <div class="mb-2">
-                            <label for="editRfcCliente" class="form-label">Cliente / Proveedor</label>
+                            <label for="editRfcCliente" class="form-label">Cliente / Proveedor (RFC)</label>
                             <input type="text" class="form-control form-control-sm fw-bold" id="editRfcCliente" name="rfcCliente" required style="font-size: 0.75rem;">
                         </div>
                         <div class="mb-2">
@@ -315,47 +318,54 @@ body {
             const filas = tabla.querySelectorAll('tbody tr:not(#filaSinDatos)');
             const filaSinDatos = document.getElementById('filaSinDatos');
 
-            buscador.addEventListener('input', function() {
-                const query = buscador.value.toLowerCase().trim();
-                let encontradas = 0;
+            if (buscador) {
+                buscador.addEventListener('input', function() {
+                    const query = buscador.value.toLowerCase().trim();
+                    let encontradas = 0;
 
-                filas.forEach(f => {
-                    const celdaFiltro = f.querySelector('.col-filtrar');
-                    if (celdaFiltro) {
-                        const texto = celdaFiltro.textContent.toLowerCase();
-                        if (texto.includes(query)) {
-                            f.style.display = '';
-                            encontradas++;
-                        } else {
-                            f.style.display = 'none';
+                    filas.forEach(f => {
+                        const celdaFiltro = f.querySelector('.col-filtrar');
+                        if (celdaFiltro) {
+                            const texto = celdaFiltro.textContent.toLowerCase();
+                            if (texto.includes(query)) {
+                                f.style.display = '';
+                                encontradas++;
+                            } else {
+                                f.style.display = 'none';
+                            }
                         }
+                    });
+
+                    if (filaSinDatos) {
+                        filaSinDatos.style.display = (encontradas === 0 && query !== '') ? '' : 'none';
                     }
                 });
+            }
 
-                filaSinDatos.style.display = (encontradas === 0 && query !== '') ? '' : 'none';
-            });
-
-            const modalEditar = new bootstrap.Modal(document.getElementById('modalEditarFactura'));
-            
-            document.querySelectorAll('.btn-editar-factura').forEach(boton => {
-                boton.addEventListener('click', function() {
-                    const idFactura = this.getAttribute('data-id');
-                    
-                    fetch('/facturas/obtener/' + idFactura)
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById('editId').value = data.id;
-                            document.getElementById('editRfcCliente').value = data.rfcCliente;
-                            document.getElementById('editTotal').value = data.total;
-                            document.getElementById('editTipo').value = data.tipo;
-                            modalEditar.show();
-                        })
-                        .catch(err => {
-                            alert("No se pudieron cargar los datos de la factura.");
-                            console.error(err);
-                        });
+            const modalEditarEl = document.getElementById('modalEditarFactura');
+            if (modalEditarEl) {
+                const modalEditar = new bootstrap.Modal(modalEditarEl);
+                
+                document.querySelectorAll('.btn-editar-factura').forEach(boton => {
+                    boton.addEventListener('click', function() {
+                        const idFactura = this.getAttribute('data-id');
+                        
+                        fetch('/facturas/obtener/' + idFactura)
+                            .then(response => response.json())
+                            .then(data => {
+                                document.getElementById('editId').value = data.id;
+                                document.getElementById('editRfcCliente').value = data.rfcCliente;
+                                document.getElementById('editTotal').value = data.total;
+                                document.getElementById('editTipo').value = data.tipo;
+                                modalEditar.show();
+                            })
+                            .catch(err => {
+                                alert("No se pudieron cargar los datos de la factura.");
+                                console.error(err);
+                            });
+                    });
                 });
-            });
+            }
         });
     </script>
 </body>

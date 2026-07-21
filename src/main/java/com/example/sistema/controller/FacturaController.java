@@ -174,7 +174,7 @@ public class FacturaController {
             model.addAttribute("totalNeto", ingresos - egresos); 
             model.addAttribute("xmlProcesados", comprobantesXml.size());
             
-            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
+            // Siempre toma la razón social de la empresa
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) { 
@@ -199,8 +199,6 @@ public class FacturaController {
             
             model.addAttribute("clientes", listaClientes);
             model.addAttribute("empresaRfc", logueado.getEmpresa().getRfc());
-            
-            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) {
@@ -234,7 +232,7 @@ public class FacturaController {
             
             facturaMap.put("payment_form", formaLimpia);   
             facturaMap.put("payment_method", metodoLimpio); 
-            facturaMap.put("use", "G03");                     
+            facturaMap.put("use", "G03");                    
 
             Map<String, Object> customer = new HashMap<>();
             Map<String, String> address = new HashMap<>();
@@ -409,8 +407,6 @@ public class FacturaController {
             
             model.addAttribute("usuarioLogueado", logueado);
             model.addAttribute("facturas", facturasManuales);
-            
-            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) {
@@ -438,7 +434,7 @@ public class FacturaController {
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
             String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
                             + " con RFC: " + nuevoCliente.getRfc();
-                                                                                        
+                                                                                                        
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
@@ -452,8 +448,6 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             model.addAttribute("usuarios", usuarioRepository.findByEmpresaId(logueado.getEmpresa().getId()));
             model.addAttribute("usuarioLogueado", logueado); 
-            
-            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) { model.addAttribute("usuarios", new ArrayList<>()); }
@@ -505,8 +499,6 @@ public class FacturaController {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             model.addAttribute("usuario", logueado);
-            
-            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) { return "redirect:/"; }
@@ -687,7 +679,6 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             String rutaCarpeta = BASE_PATH + logueado.getEmpresa().getId() + "/";
             
-            // CORRECCIÓN: Buscamos dinámicamente si corresponde a un ID o a un UUID de factura manual
             String nombreArchivo = identificador.contains("-") ? "manual_" + identificador + ".xml" : "factura_" + identificador + ".xml";
 
             if (identificador.matches("^\\d+$")) {
@@ -716,31 +707,39 @@ public class FacturaController {
     }
 
     // =========================================================================
-    // 3. GENERACIÓN DE REPORTES PDF (OPENPDF)
+    // 3. GENERACIÓN DE REPORTES PDF MEJORADA (OPENPDF)
     // =========================================================================
     @GetMapping("/descargar-pdf/{identificador}")
     @ResponseBody
     public ResponseEntity<Resource> descargarPdf(Principal principal, @PathVariable String identificador) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
-            String idEmpresaCarpeta = String.valueOf(logueado.getEmpresa().getId());
+            Long idEmpresa = logueado.getEmpresa().getId();
+            String idEmpresaCarpeta = String.valueOf(idEmpresa);
             
             String nombreArchivo = identificador.contains("-") ? "manual_" + identificador + ".pdf" : "factura_" + identificador + ".pdf";
             
             String rfcEmisor = logueado.getEmpresa().getRfc();
             String razonSocial = logueado.getEmpresa().getRazonSocial();
+            
+            // Datos del cliente por defecto
             String rfcCliente = "XAXX010101000";
+            String nombreCliente = "PÚBLICO EN GENERAL";
+            String codigoPostalCliente = "06470";
+            String regimenCliente = "616 - Sin obligaciones fiscales";
+            
             double total = 0.00;
             double subtotal = 0.00;
             double iva = 0.00;
             String tipo = "INGRESO";
             String fecha = LocalDate.now().toString();
 
+            // Buscar en BD si el identificador es numérico
             if (identificador.matches("^\\d+$")) {
                 Optional<Factura> fOpt = facturaRepository.findById(Long.parseLong(identificador));
                 if (fOpt.isPresent()) {
                     Factura f = fOpt.get();
-                    if (f.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
+                    if (f.getEmpresa().getId().equals(idEmpresa)) {
                         rfcCliente = f.getRfcCliente() != null ? f.getRfcCliente() : rfcCliente;
                         total = f.getTotal() != null ? f.getTotal() : 0.00;
                         subtotal = f.getSubtotal() != null ? f.getSubtotal() : total;
@@ -750,6 +749,17 @@ public class FacturaController {
                         if (f.getNombreArchivo() != null) {
                             nombreArchivo = f.getNombreArchivo().replace(".xml", ".pdf");
                         }
+                    }
+                }
+            }
+
+            // BÚSQUEDA DE DATOS FISCALES COMPLETOS EN LA ENTIDAD CLIENTE
+            List<Cliente> clientesEncontrados = clienteRepository.findClientesPorEmpresa(idEmpresa);
+            if (clientesEncontrados != null) {
+                for (Cliente c : clientesEncontrados) {
+                    if (c.getRfc() != null && c.getRfc().equalsIgnoreCase(rfcCliente)) {
+                        nombreCliente = c.getNombre() != null ? c.getNombre() : nombreCliente;
+                        break;
                     }
                 }
             }
@@ -764,10 +774,12 @@ public class FacturaController {
                 document.open();
                 
                 Font fontEmpresa = new Font(Font.HELVETICA, 16, Font.BOLD, new Color(20, 40, 80));
-                Font fontSeccion = new Font(Font.HELVETICA, 11, Font.BOLD, Color.WHITE);
-                Font fontContenidoBold = new Font(Font.HELVETICA, 10, Font.BOLD);
-                Font fontContenido = new Font(Font.HELVETICA, 10, Font.NORMAL);
+                Font fontSeccion = new Font(Font.HELVETICA, 10, Font.BOLD, Color.WHITE);
+                Font fontHeaderTabla = new Font(Font.HELVETICA, 9, Font.BOLD, Color.WHITE);
+                Font fontContenidoBold = new Font(Font.HELVETICA, 9, Font.BOLD);
+                Font fontContenido = new Font(Font.HELVETICA, 9, Font.NORMAL);
 
+                // --- 1. ENCABEZADO DE LA EMPRESA Y FACTURA ---
                 PdfPTable headerTable = new PdfPTable(2);
                 headerTable.setWidthPercentage(100);
                 headerTable.setWidths(new int[]{60, 40});
@@ -776,80 +788,129 @@ public class FacturaController {
                 leftHeader.setBorder(PdfPCell.NO_BORDER);
                 leftHeader.addElement(new Paragraph(razonSocial.toUpperCase(), fontEmpresa));
                 leftHeader.addElement(new Paragraph("RFC EMISOR: " + rfcEmisor, fontContenidoBold));
-                leftHeader.addElement(new Paragraph("Regimen Fiscal: 601 - General de Ley Personas Morales", fontContenido));
+                leftHeader.addElement(new Paragraph("Régimen Fiscal: 601 - General de Ley Personas Morales", fontContenido));
                 headerTable.addCell(leftHeader);
 
                 PdfPCell rightHeader = new PdfPCell();
                 rightHeader.setBorder(PdfPCell.NO_BORDER);
                 rightHeader.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                rightHeader.addElement(new Paragraph("FACTURA / COMPROBANTE", fontContenidoBold));
+                rightHeader.addElement(new Paragraph("COMPROBANTE FISCAL DIGITAL (CFDI)", fontContenidoBold));
                 rightHeader.addElement(new Paragraph("Folio Interno: " + identificador, fontContenido));
                 rightHeader.addElement(new Paragraph("Fecha: " + fecha, fontContenido));
-                rightHeader.addElement(new Paragraph("Efecto: " + tipo, fontContenidoBold));
+                rightHeader.addElement(new Paragraph("Efecto de Comprobante: " + tipo, fontContenidoBold));
                 headerTable.addCell(rightHeader);
                 
                 document.add(headerTable);
                 document.add(new Paragraph(" \n"));
 
+                // --- 2. SECCIÓN DATOS DEL CLIENTE (RECEPTOR) ---
                 PdfPTable receptorBarra = new PdfPTable(1);
                 receptorBarra.setWidthPercentage(100);
-                PdfPCell celdaBarra = new PdfPCell(new Phrase("DATOS DEL CLIENTE (RECEPTOR)", fontSeccion));
+                PdfPCell celdaBarra = new PdfPCell(new Phrase("DATOS DEL CLIENTE / RECEPTOR", fontSeccion));
                 celdaBarra.setBackgroundColor(new Color(40, 70, 120));
-                celdaBarra.setPadding(5);
+                celdaBarra.setPadding(4);
                 celdaBarra.setBorder(PdfPCell.NO_BORDER);
                 receptorBarra.addCell(celdaBarra); 
                 document.add(receptorBarra);
 
-                PdfPTable receptorDatos = new PdfPTable(1);
+                PdfPTable receptorDatos = new PdfPTable(2);
                 receptorDatos.setWidthPercentage(100);
-                PdfPCell celdaDatos = new PdfPCell();
-                celdaDatos.setPadding(8);
-                celdaDatos.setBorderColor(new Color(200, 200, 200));
-                celdaDatos.addElement(new Paragraph("RFC CLIENTE: " + rfcCliente, fontContenidoBold));
-                celdaDatos.addElement(new Paragraph("Uso CFDI: G03 - Gastos en general", fontContenido));
-                receptorDatos.addCell(celdaDatos);
+                receptorDatos.setWidths(new int[]{50, 50});
+
+                PdfPCell celdaDatosIzq = new PdfPCell();
+                celdaDatosIzq.setPadding(6);
+                celdaDatosIzq.setBorderColor(new Color(200, 200, 200));
+                celdaDatosIzq.addElement(new Paragraph("Razón Social: " + nombreCliente, fontContenidoBold));
+                celdaDatosIzq.addElement(new Paragraph("RFC: " + rfcCliente, fontContenido));
+                receptorDatos.addCell(celdaDatosIzq);
+
+                PdfPCell celdaDatosDer = new PdfPCell();
+                celdaDatosDer.setPadding(6);
+                celdaDatosDer.setBorderColor(new Color(200, 200, 200));
+                celdaDatosDer.addElement(new Paragraph("Código Postal: " + codigoPostalCliente, fontContenido));
+                celdaDatosDer.addElement(new Paragraph("Régimen Fiscal: " + regimenCliente, fontContenido));
+                celdaDatosDer.addElement(new Paragraph("Uso CFDI: G03 - Gastos en general", fontContenido));
+                receptorDatos.addCell(celdaDatosDer);
+
                 document.add(receptorDatos);
                 document.add(new Paragraph(" \n"));
 
+                // --- 3. TABLA DETALLE DE CONCEPTOS / SERVICIOS ---
                 PdfPTable conceptosBarra = new PdfPTable(1);
                 conceptosBarra.setWidthPercentage(100);
-                PdfPCell celdaBarra2 = new PdfPCell(new Phrase("DETALLE DEL COMPROBANTE", fontSeccion));
+                PdfPCell celdaBarra2 = new PdfPCell(new Phrase("DETALLE DE CONCEPTOS Y SERVICIOS", fontSeccion));
                 celdaBarra2.setBackgroundColor(new Color(40, 70, 120));
-                celdaBarra2.setPadding(5);
+                celdaBarra2.setPadding(4);
                 celdaBarra2.setBorder(PdfPCell.NO_BORDER);
                 conceptosBarra.addCell(celdaBarra2);
                 document.add(conceptosBarra);
 
+                PdfPTable tablaConceptos = new PdfPTable(4);
+                tablaConceptos.setWidthPercentage(100);
+                tablaConceptos.setWidths(new int[]{12, 58, 15, 15});
+
+                String[] encabezados = {"Cant.", "Descripción / Servicio", "P. Unitario", "Importe"};
+                for (String enc : encabezados) {
+                    PdfPCell hCell = new PdfPCell(new Phrase(enc, fontHeaderTabla));
+                    hCell.setBackgroundColor(new Color(70, 90, 130));
+                    hCell.setPadding(5);
+                    hCell.setHorizontalAlignment(enc.contains("P.") || enc.equals("Importe") ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT);
+                    tablaConceptos.addCell(hCell);
+                }
+
+                // Fila Única o Principal de Conceptos
+                PdfPCell cCant = new PdfPCell(new Phrase("1", fontContenido));
+                cCant.setPadding(5);
+                tablaConceptos.addCell(cCant);
+
+                PdfPCell cDesc = new PdfPCell(new Phrase("Servicios Profesionales / Facturación General", fontContenido));
+                cDesc.setPadding(5);
+                tablaConceptos.addCell(cDesc);
+
+                PdfPCell cPU = new PdfPCell(new Phrase(String.format("$%.2f", subtotal), fontContenido));
+                cPU.setPadding(5);
+                cPU.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                tablaConceptos.addCell(cPU);
+
+                PdfPCell cImp = new PdfPCell(new Phrase(String.format("$%.2f", subtotal), fontContenido));
+                cImp.setPadding(5);
+                cImp.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                tablaConceptos.addCell(cImp);
+
+                document.add(tablaConceptos);
+                document.add(new Paragraph(" \n"));
+
+                // --- 4. RESUMEN FINANCIERO Y TOTALES ---
                 PdfPTable tablaFinanciera = new PdfPTable(2);
                 tablaFinanciera.setWidthPercentage(100);
                 tablaFinanciera.setWidths(new int[]{70, 30});
 
-                PdfPCell cSubLabel = new PdfPCell(new Phrase(" Subtotal Base (Moneda Nacional)", fontContenido));
-                cSubLabel.setPadding(6);
+                PdfPCell cSubLabel = new PdfPCell(new Phrase("Subtotal Base (Moneda Nacional)", fontContenido));
+                cSubLabel.setPadding(5);
                 cSubLabel.setBorderColor(new Color(220, 220, 220));
-                PdfPCell cSubVal = new PdfPCell(new Phrase(String.format(" $%.2f MXN", subtotal), fontContenido));
-                cSubVal.setPadding(6);
+                PdfPCell cSubVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", subtotal), fontContenido));
+                cSubVal.setPadding(5);
                 cSubVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 cSubVal.setBorderColor(new Color(220, 220, 220));
                 tablaFinanciera.addCell(cSubLabel);
                 tablaFinanciera.addCell(cSubVal);
 
-                PdfPCell cIvaLabel = new PdfPCell(new Phrase(" Impuesto Trasladado (IVA 16%)", fontContenido));
-                cIvaLabel.setPadding(6);
+                PdfPCell cIvaLabel = new PdfPCell(new Phrase("Impuesto Trasladado (IVA 16%)", fontContenido));
+                cIvaLabel.setPadding(5);
                 cIvaLabel.setBorderColor(new Color(220, 220, 220));
-                PdfPCell cIvaVal = new PdfPCell(new Phrase(String.format(" $%.2f MXN", iva), fontContenido));
-                cIvaVal.setPadding(6);
+                PdfPCell cIvaVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", iva), fontContenido));
+                cIvaVal.setPadding(5);
                 cIvaVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 cIvaVal.setBorderColor(new Color(220, 220, 220));
                 tablaFinanciera.addCell(cIvaLabel);
                 tablaFinanciera.addCell(cIvaVal);
 
-                PdfPCell cTotLabel = new PdfPCell(new Phrase(" TOTAL NETO A PAGAR", fontContenidoBold));
-                cTotLabel.setPadding(8);
+                PdfPCell cTotLabel = new PdfPCell(new Phrase("TOTAL NETO A PAGAR", fontContenidoBold));
+                cTotLabel.setPadding(7);
                 cTotLabel.setBackgroundColor(new Color(245, 245, 245));
                 cTotLabel.setBorderColor(new Color(180, 180, 180));
-                PdfPCell cTotVal = new PdfPCell(new Phrase(String.format(" $%.2f MXN", total), fontContenidoBold));
-                cTotVal.setPadding(8);
+                PdfPCell cTotVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", total), fontContenidoBold));
+                cTotVal.setPadding(7);
                 cTotVal.setBackgroundColor(new Color(245, 245, 245));
                 cTotVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 cTotVal.setBorderColor(new Color(180, 180, 180));
@@ -920,11 +981,9 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
             
-            // Usamos la consulta directa e integral por empresa
             List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
             if (todas == null) todas = new ArrayList<>();
             
-            // FILTRO FISCAL CORREGIDO
             List<Factura> comprobantesXml = todas.stream()
                     .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().startsWith("manual_"))
                     .collect(Collectors.toList());
@@ -953,8 +1012,6 @@ public class FacturaController {
             model.addAttribute("egresosSubtotal", egresosSubtotal);
             model.addAttribute("ivaAcreditable", egresosIva);
             model.addAttribute("balanceIva", balanceIva);
-            
-            // ✅ CORREGIDO: Siempre toma la razón social de la empresa
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) {
