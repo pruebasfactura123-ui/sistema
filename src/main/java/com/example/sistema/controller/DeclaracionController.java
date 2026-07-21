@@ -26,6 +26,7 @@ import java.security.Principal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/operaciones")
@@ -46,14 +47,14 @@ public class DeclaracionController {
     private Usuario getUsuarioLogueado(Principal principal) {
         if (principal == null) throw new RuntimeException("No hay ninguna sesión activa.");
         
-        // Salvavidas para tu admin de pruebas en memoria
+        // Salvavidas para el admin de pruebas en memoria
         if ("admin".equalsIgnoreCase(principal.getName())) {
             Usuario adminFicticio = new Usuario();
             adminFicticio.setUsername("admin");
             adminFicticio.setRol("JEFE");
             
             Empresa emp = new Empresa();
-            emp.setId(1L); // <--- CAMBIA ESTE '1' por el ID de empresa que quieras testear con tu admin
+            emp.setId(1L); // ID de la empresa de pruebas
             emp.setRazonSocial("Empresa de Prueba (Admin)");
             adminFicticio.setEmpresa(emp);
             return adminFicticio;
@@ -81,19 +82,10 @@ public class DeclaracionController {
                 model.addAttribute("empresaNombre", "Sin Empresa Asignada");
             } else {
                 Long empresaId = logueado.getEmpresa().getId();
-                // Filtro dinámico directo desde la base de datos por el ID de la empresa del usuario
                 List<Declaracion> declaraciones = declaracionRepository.findByEmpresaIdOrderByAnioDescMesDesc(empresaId);
                 
                 model.addAttribute("declaraciones", declaraciones);
-                
-                // ASIGNACIÓN DINÁMICA: Si es el admin de pruebas usa el texto genérico, si no, extrae la Razón Social real.
-                if ("admin".equalsIgnoreCase(logueado.getUsername())) {
-                    model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-                } else {
-                    // Si el objeto Empresa tiene el atributo 'getRazonSocial()', usamos ese. 
-                    // Si en tu modelo se llama 'getNombre()', cámbialo aquí abajo:
-                    model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-                }
+                model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -105,7 +97,8 @@ public class DeclaracionController {
     }
 
     /**
-     * Procesa el formulario para registrar una nueva obligación/declaración fiscal
+     * Procesa el formulario para registrar una nueva obligación/declaración fiscal.
+     * Incluye validación de duplicados.
      */
     @PostMapping("/declaraciones/guardar")
     public String guardarDeclaracion(Principal principal,
@@ -120,17 +113,28 @@ public class DeclaracionController {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             if (logueado.getEmpresa() != null) {
+                Long empresaId = logueado.getEmpresa().getId();
+
+                // 1. VALIDACIÓN CONTRA DUPLICADOS
+                boolean existeDuplicado = declaracionRepository.existsByEmpresaIdAndAnioAndMesAndTipo(
+                        empresaId, anio, mes, tipo
+                );
+
+                if (existeDuplicado) {
+                    return "redirect:/operaciones/declaraciones?errorDuplicado=true";
+                }
+
+                // 2. GUARDADO DE LA NUEVA DECLARACIÓN
                 Declaracion nueva = new Declaracion();
                 nueva.setAnio(anio);
                 nueva.setMes(mes);
                 nueva.setTipo(tipo);
                 nueva.setFechaVencimiento(fechaVencimiento);
-                nueva.setEstado("PENDIENTE"); // Toda declaración inicia como pendiente
-
-                // Asignamos dinámicamente la empresa real del usuario logueado (o la simulada del admin)
+                nueva.setEstado("PENDIENTE");
                 nueva.setEmpresa(logueado.getEmpresa());
 
                 declaracionRepository.save(nueva);
+                return "redirect:/operaciones/declaraciones?exito=true";
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -146,11 +150,18 @@ public class DeclaracionController {
     public String presentarDeclaracion(@PathVariable("id") Long id,
                                        @RequestParam("archivoAcuse") MultipartFile archivo) {
         
-        Declaracion dec = declaracionRepository.findById(id).orElse(null);
+        Optional<Declaracion> decOpt = declaracionRepository.findById(id);
         
-        if (dec != null && !archivo.isEmpty()) {
+        if (decOpt.isPresent() && !archivo.isEmpty()) {
+            Declaracion dec = decOpt.get();
             try {
-                // Crear carpeta física si no existe en el disco duro
+                // Validar extensión básica (.pdf)
+                String originalFilename = archivo.getOriginalFilename();
+                if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".pdf")) {
+                    return "redirect:/operaciones/declaraciones?errorExtension=true";
+                }
+
+                // Crear carpeta física en C:/ si no existe
                 File directorio = new File(UPLOAD_DIR);
                 if (!directorio.exists()) {
                     directorio.mkdirs();
@@ -163,10 +174,10 @@ public class DeclaracionController {
                 // Guardar el archivo en el disco local
                 Files.write(rutaCompleta, archivo.getBytes());
 
-                // Actualizar los datos del registro en la BD
+                // Actualizar datos de la BD
                 dec.setRutaAcusePdf(nombreArchivo);
                 dec.setEstado("PRESENTADA");
-                dec.setFechaPresentacion(LocalDate.now()); // Se presenta hoy
+                dec.setFechaPresentacion(LocalDate.now());
 
                 declaracionRepository.save(dec);
 
@@ -179,7 +190,7 @@ public class DeclaracionController {
     }
 
     /**
-     * Lee el PDF desde el disco C:/ y lo transmite al navegador 
+     * Transmite el archivo PDF almacenado en C:/ directamente al navegador
      */
     @GetMapping("/acuses/{filename:.+}")
     @ResponseBody
