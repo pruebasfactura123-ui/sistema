@@ -125,7 +125,6 @@
     <div class="d-flex">
         <div class="sidebar">
             <div class="sidebar-brand">
-                <!-- FORZAMOS A OBTENER EL NOMBRE DESDE LA ENTIDAD EN SESIÓN O USUARIOLOGUEADO -->
                 <span th:text="${usuarioLogueado != null and usuarioLogueado.empresa != null ? usuarioLogueado.empresa.razonSocial : (#authentication.principal != 'anonymousUser' and #authentication.principal.usuario != null and #authentication.principal.usuario.empresa != null ? #authentication.principal.usuario.empresa.razonSocial : (empresaNombre != null and empresaNombre != 'OFICINA FISCAL' ? empresaNombre : 'Sistema Contable'))}">Sistema Contable</span>
             </div>
             
@@ -226,7 +225,9 @@
                 <div class="col-md-4">
                     <div class="card-custom">
                         <h6 class="fw-bold mb-3 text-navy" style="color: var(--navy);"><i class="fas fa-user-plus me-2 text-muted"></i>Nuevo Cliente</h6>
-                        <form th:action="@{/clientes/crear}" method="post">
+                        
+                        <!-- FORMAR A RUTA CORRECTA /clientes/guardar Y PREVENIR DOBLE SUBMIT -->
+                        <form th:action="@{/clientes/guardar}" method="post" onsubmit="let btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = '<i class=\'fas fa-spinner fa-spin me-1\'></i>Guardando...';">
                             <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             
                             <div class="mb-2">

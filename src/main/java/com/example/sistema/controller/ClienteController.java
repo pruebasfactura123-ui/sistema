@@ -9,10 +9,8 @@ import com.example.sistema.repository.AuditoriaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.*;
+
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,13 +73,17 @@ public class ClienteController {
         return "clientes"; 
     }
 
-    // 1. Guardar nuevo cliente con validación manual estricta y registro en bitácora
+    // 1. Guardar nuevo cliente con validación estricta de RFC y sanitización de datos
     @PostMapping("/clientes/guardar")
     public String guardarCliente(Principal principal, @ModelAttribute("clienteNuevo") Cliente cliente) {
         if (principal == null) return "redirect:/login";
 
         try {
             Usuario logueado = getUsuarioLogueado(principal);
+
+            if (cliente.getNombre() == null || cliente.getRfc() == null) {
+                return "redirect:/clientes?errorDatosIncompletos";
+            }
 
             String nombreLimpio = cliente.getNombre().trim().toUpperCase();
             String rfcLimpio = cliente.getRfc().trim().toUpperCase();
@@ -107,13 +109,21 @@ public class ClienteController {
             cliente.setRfc(rfcLimpio);
             cliente.setEmpresa(logueado.getEmpresa());
 
+            // Normalizar campos opcionales si vienen vacíos
+            if (cliente.getTelefono() == null || cliente.getTelefono().isBlank()) {
+                cliente.setTelefono("N/A");
+            }
+            if (cliente.getCorreo() == null || cliente.getCorreo().isBlank()) {
+                cliente.setCorreo("N/A");
+            }
+
             // Guardar cliente en BD
             clienteRepository.save(cliente);
 
             // REGISTRO EN BITÁCORA
             String detalles = "Agregó un nuevo cliente al sistema: " + cliente.getNombre() 
                             + " con RFC: " + cliente.getRfc();
-                                
+                            
             Auditoria registro = new Auditoria(logueado.getUsername(), "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
@@ -125,8 +135,8 @@ public class ClienteController {
         return "redirect:/clientes?exito";
     }
 
-    // 2. Mapeo seguro para dar de baja clientes (Solo JEFE o GERENTE)
-    @PostMapping("/clientes/eliminar/{id}")
+    // 2. Dar de baja clientes (Soporta mapeo @GetMapping y @RequestMapping para evitar errores 405)
+    @RequestMapping(value = "/clientes/eliminar/{id}", method = {RequestMethod.GET, RequestMethod.POST})
     public String eliminarCliente(Principal principal, @PathVariable Long id) {
         if (principal == null) return "redirect:/login";
 
@@ -134,13 +144,13 @@ public class ClienteController {
             Usuario logueado = getUsuarioLogueado(principal);
             
             // Filtro de seguridad por Roles tolerantes a la baja
-            if ("JEFE".equalsIgnoreCase(logueado.getRol()) || "GERENTE".equalsIgnoreCase(logueado.getRol())) {
+            if ("JEFE".equalsIgnoreCase(logueado.getRol()) || "GERENTE".equalsIgnoreCase(logueado.getRol()) || "ADMIN".equalsIgnoreCase(logueado.getRol())) {
                 
                 clienteRepository.findById(id).ifPresent(c -> {
                     // Verificamos propiedad de multi-tenancy (misma empresa)
                     if (c.getEmpresa() != null && c.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
                         
-                        // Generar la bitácora antes de destruirlo de la BD
+                        // Generar la bitácora antes de eliminar de la BD
                         String detalles = "Eliminó del sistema al Cliente: " + c.getNombre() + " (RFC: " + c.getRfc() + ")";
                         Auditoria registro = new Auditoria(logueado.getUsername(), "ELIMINAR CLIENTE", detalles, logueado.getEmpresa());
                         auditoriaRepository.save(registro);
