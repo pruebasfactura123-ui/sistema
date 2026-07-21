@@ -11,25 +11,33 @@ public class Factura {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 500)
+    @Column(name = "rfc_emisor", length = 500)
     private String rfcEmisor;
 
-    @Column(length = 255) 
+    @Column(name = "rfc_cliente", length = 255) 
     private String rfcCliente;
 
-    @Column(name = "nombre_archivo")
+    @Column(name = "nombre_archivo", length = 255)
     private String nombreArchivo; 
 
+    @Column(name = "subtotal")
     private Double subtotal;
+
+    @Column(name = "iva")
     private Double iva;
+
+    @Column(name = "total")
     private Double total;
+
+    @Column(name = "fecha")
     private LocalDate fecha;
 
-    @Column(length = 50)
+    @Column(name = "tipo", length = 50)
     private String tipo; // INGRESO o EGRESO
 
-    @Column(columnDefinition = "TEXT")
-    private String estado; // Para descripciones largas de XML u observaciones
+    //  AJUSTE CLAVE PARA SQL SERVER: varchar(max) en lugar de TEXT
+    @Column(name = "estado", columnDefinition = "VARCHAR(MAX)")
+    private String estado; 
 
     // --- RELACIÓN: Muchas facturas pertenecen a una Empresa ---
     @ManyToOne
