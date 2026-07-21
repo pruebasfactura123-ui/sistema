@@ -6,111 +6,111 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-            :root { 
-    --navy: #0f172a; 
-    --bg: #f8fafc; 
-    --border: #1e293b; 
-    --sidebar-width: 260px; /* Ya estaba correcto aquí */
-    --text-muted: #64748b;
-    --accent: #3b82f6;
-}
-body { 
-    background: var(--bg); 
-    font-family: 'DM Sans', sans-serif; 
-    font-size: 0.9rem; /* CAMBIADO: De 0.75rem a 0.9rem para mejor lectura general */
-    color: #1e293b; 
-    margin: 0;
-    padding: 0;
-}
+        :root { 
+            --navy: #0f172a; 
+            --bg: #f8fafc; 
+            --border: #1e293b; 
+            --sidebar-width: 260px;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+        }
+        body { 
+            background: var(--bg); 
+            font-family: 'DM Sans', sans-serif; 
+            font-size: 0.9rem; 
+            color: #1e293b; 
+            margin: 0;
+            padding: 0;
+        }
 
-/* Estilos Core del Sidebar */
-.sidebar { 
-    width: var(--sidebar-width); 
-    background-color: var(--navy); 
-    min-height: 100vh; 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    display: flex; 
-    flex-direction: column; 
-    padding: 25px 0 0 0; /* CAMBIADO: De 20px a 25px para dar más aire arriba */
-    z-index: 1000;
-}
-.sidebar-brand { 
-    padding: 0 24px 25px 24px; /* CAMBIADO: De 20px a 25px de padding inferior */
-    font-size: 1.15rem; /* CAMBIADO: De 0.95rem a 1.15rem para resaltar el título */
-    font-weight: bold; 
-    color: white; 
-    border-bottom: 1px solid var(--border);
-    letter-spacing: 0.5px;
-}
-.sidebar-header { 
-    padding: 20px 24px 8px 24px; /* CAMBIADO: Espaciado más amplio */
-    font-size: 0.70rem; /* CAMBIADO: De 0.55rem a 0.70rem (ya no es microscópico) */
-    font-weight: bold; 
-    text-transform: uppercase; 
-    color: #64748b; 
-    letter-spacing: 1px;
-}
-.sidebar-menu { list-style: none; padding: 0; margin: 0; }
-.sidebar-item a { 
-    display: flex; 
-    align-items: center; 
-    padding: 12px 24px; /* CAMBIADO: De 10px a 12px de padding vertical para clics más cómodos */
-    color: #94a3b8; 
-    text-decoration: none; 
-    font-size: 0.95rem; /* CAMBIADO: De 0.75rem a 0.95rem para que se lea perfecto */
-    transition: all 0.2s ease;
-}
-.sidebar-item a i { 
-    width: 20px; 
-    font-size: 1.05rem; /* CAMBIADO: De 0.85rem a 1.05rem para emparejar con el texto */
-    margin-right: 12px; /* CAMBIADO: De 10px a 12px */
-}
-.sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
-.sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
+        /* Estilos Core del Sidebar */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--navy); 
+            min-height: 100vh; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 25px 0 0 0; 
+            z-index: 1000;
+        }
+        .sidebar-brand { 
+            padding: 0 24px 25px 24px; 
+            font-size: 1.15rem; 
+            font-weight: bold; 
+            color: white; 
+            border-bottom: 1px solid var(--border);
+            letter-spacing: 0.5px;
+        }
+        .sidebar-header { 
+            padding: 20px 24px 8px 24px; 
+            font-size: 0.70rem; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            color: #64748b; 
+            letter-spacing: 1px;
+        }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
+        .sidebar-item a { 
+            display: flex; 
+            align-items: center; 
+            padding: 12px 24px; 
+            color: #94a3b8; 
+            text-decoration: none; 
+            font-size: 0.95rem; 
+            transition: all 0.2s ease;
+        }
+        .sidebar-item a i { 
+            width: 20px; 
+            font-size: 1.05rem; 
+            margin-right: 12px; 
+        }
+        .sidebar-item a:hover { color: white; background: rgba(255,255,255,0.03); }
+        .sidebar-item.active a { color: white; background: #1e293b; font-weight: 500; border-radius: 0 25px 25px 0; margin-right: 15px; }
 
-/* Sección de Perfil / Footer del Sidebar */
-.sidebar-footer {
-    margin-top: auto;
-    border-top: 1px solid var(--border);
-    background-color: rgba(0, 0, 0, 0.1);
-}
-.sidebar-user {
-    padding: 18px 24px 15px 24px; /* CAMBIADO: Ligeramente más espaciado */
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
-.sidebar-user .user-info { 
-    color: white; 
-    font-weight: 500; 
-    font-size: 0.85rem; /* CAMBIADO: De 0.75rem a 0.85rem */
-}
-.sidebar-user .user-status { 
-    font-size: 0.65rem; /* CAMBIADO: De 0.55rem a 0.65rem */
-    color: #10b981; 
-    display: block; 
-    font-weight: bold; 
-}
+        /* Sección de Perfil / Footer del Sidebar */
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-user {
+            padding: 18px 24px 15px 24px; 
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sidebar-user img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+        .sidebar-user .user-info { 
+            color: white; 
+            font-weight: 500; 
+            font-size: 0.85rem; 
+        }
+        .sidebar-user .user-status { 
+            font-size: 0.65rem; 
+            color: #10b981; 
+            display: block; 
+            font-weight: bold; 
+        }
 
-.btn-logout { 
-    color: #ef4444 !important; 
-    font-size: 0.85rem !important; /* CAMBIADO: De 0.75rem a 0.85rem */
-    border-top: 1px solid rgba(255,255,255,0.05);
-    background: none;
-    border: none;
-    width: 100%;
-    text-align: left;
-}
+        .btn-logout { 
+            color: #ef4444 !important; 
+            font-size: 0.85rem !important; 
+            border-top: 1px solid rgba(255,255,255,0.05);
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
 
-/* Contenedor Principal */
-.main-content { 
-    margin-left: var(--sidebar-width); 
-    flex-grow: 1; 
-    padding: 40px; /* CAMBIADO: De 30px a 40px para que el contenido "respire" más */
-}
+        /* Contenedor Principal */
+        .main-content { 
+            margin-left: var(--sidebar-width); 
+            flex-grow: 1; 
+            padding: 40px; 
+        }
         .card-custom { background: white; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.01); }
         
         /* Tablas */
@@ -129,7 +129,7 @@ body {
     <div class="d-flex">
         <div class="sidebar">
             <div class="sidebar-brand">
-                <span th:text="${empresaNombre ?: 'Sistema Contable'}">Sistema Contable</span>
+                <span th:text="${usuarioLogueado != null and usuarioLogueado.empresa != null ? usuarioLogueado.empresa.razonSocial : (#authentication.principal != 'anonymousUser' and #authentication.principal.usuario != null and #authentication.principal.usuario.empresa != null ? #authentication.principal.usuario.empresa.razonSocial : (empresaNombre != null and empresaNombre != 'OFICINA FISCAL' ? empresaNombre : 'Sistema Contable'))}">Sistema Contable</span>
             </div>
             
             <ul class="sidebar-menu mt-2">
@@ -165,14 +165,14 @@ body {
                     <a th:href="@{/empresa}"><i class="fas fa-building"></i> Mi Empresa</a>
                 </li>
                 <li class="sidebar-item">
-                    <a th:href="@{/usuarios}"><i class="fas fa-users-cog"></i> Auditoría / Logs</a>
+                    <a th:href="@{/operaciones/auditoria}"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
                 </li>
             </ul>
             
             <div class="sidebar-footer">
                 <a th:href="@{/perfil}" class="text-decoration-none" style="display: block;">
                     <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop" alt="User Profile">
+                        <img th:src="${usuarioLogueado != null and usuarioLogueado.fotoUrl != null ? usuarioLogueado.fotoUrl : 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="User Profile">
                         <div class="user-info">
                             <span sec:authentication="name">Usuario</span>
                             <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>
@@ -199,6 +199,16 @@ body {
                         <i class="fas fa-calculator me-1"></i> Generar Recibo de Nómina
                     </button>
                 </div>
+            </div>
+
+            <!-- Alertas de respuesta -->
+            <div th:if="${param.exito != null}" class="alert alert-success alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 mb-3" role="alert" style="font-size: 0.7rem;">
+                <i class="fas fa-check-circle me-2"></i>Recibo de nómina generado y calculado correctamente.
+                <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
+            </div>
+            <div th:if="${param.errorDuplicado != null}" class="alert alert-warning alert-dismissible fade show border-0 rounded-3 shadow-sm py-2 px-3 mb-3" role="alert" style="font-size: 0.7rem;">
+                <i class="fas fa-exclamation-triangle me-2"></i><strong>Atención:</strong> Ya existe un recibo de nómina registrado para ese trabajador en el mismo periodo.
+                <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem;"></button>
             </div>
 
             <div class="card-custom">
@@ -251,7 +261,7 @@ body {
                     <h6 class="modal-title fw-bold" style="color: var(--navy); font-size: 0.8rem;"><i class="fas fa-calculator me-2 text-primary"></i>Nueva Nómina</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.5rem;"></button>
                 </div>
-                <form th:action="@{/operaciones/nominas/guardar}" method="post" class="modal-body text-start">
+                <form id="formNuevaNomina" th:action="@{/operaciones/nominas/guardar}" method="post" class="modal-body text-start form-prevent-double-submit">
                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
                     
                     <div class="mb-2">
@@ -318,12 +328,31 @@ body {
                         <input type="date" name="fechaEmision" class="form-control form-control-sm" style="font-size: 0.65rem; border-radius: 8px;" required>
                     </div>
                     
-                    <button type="submit" class="btn btn-navy btn-sm w-100 fw-bold rounded-pill" style="font-size: 0.65rem; padding: 6px;">Calcular y Guardar</button>
+                    <button type="submit" class="btn btn-navy btn-sm w-100 fw-bold rounded-pill btn-submit-action" style="font-size: 0.65rem; padding: 6px;">Calcular y Guardar</button>
                 </form>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SCRIPT BLOQUEADOR DE DOBLE CLIC EN NÓMINAS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const forms = document.querySelectorAll('.form-prevent-double-submit');
+            
+            forms.forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    const btn = form.querySelector('.btn-submit-action');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.style.pointerEvents = 'none';
+                        btn.style.opacity = '0.7';
+                        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" style="width: 0.7rem; height: 0.7rem;"></span> Procesando...`;
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

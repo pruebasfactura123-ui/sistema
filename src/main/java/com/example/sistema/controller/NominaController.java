@@ -41,55 +41,8 @@ public class NominaController {
     private AuditoriaRepository auditoriaRepository;
 
     /**
-     * COMENTADO PARA EVITAR CONFLICTO DE MAPEO AMBIGUO
-     * Esta lógica ahora es administrada dinámicamente por NominaTrabajadorController.java
-     *
-    @GetMapping("/nominas")
-    public String listarNominas(Model model, Authentication authentication) {
-        if (authentication == null) {
-            return "redirect:/login";
-        }
-
-        // Obtener los detalles del usuario con sesión activa
-        String usernameActivo = authentication.getName();
-        Usuario usuarioLogueado = usuarioRepository.findByUsername(usernameActivo).orElse(null);
-
-        if (usuarioLogueado == null) {
-            return "redirect:/login";
-        }
-
-        List<Nomina> nominas;
-        List<Usuario> trabajadores;
-
-        // Separar lógica por Roles usando el aislamiento de empresas
-        if (usuarioLogueado.getRol().equals("JEFE") || usuarioLogueado.getRol().equals("GERENTE")) {
-            Long empresaId = usuarioLogueado.getEmpresa().getId();
-            // Trae solo las nóminas pertenecientes a empleados de su empresa
-            nominas = nominaRepository.findByTrabajadorEmpresaIdOrderByFechaEmisionDesc(empresaId);
-            // Llena el selector/dropdown solo con trabajadores de su empresa
-            trabajadores = usuarioRepository.findByEmpresaId(empresaId);
-        } else {
-            // Si es un empleado regular, solo tiene permitido ver sus propias nóminas
-            nominas = nominaRepository.findByTrabajadorOrderByFechaEmisionDesc(usuarioLogueado);
-            trabajadores = List.of(usuarioLogueado);
-        }
-
-        model.addAttribute("nominas", nominas);
-        model.addAttribute("trabajadores", trabajadores);
-        
-        // CORRECCIÓN: Uso de getRazonSocial() de forma segura en lugar de getNombre()
-        String nombreEmpresa = "OFICINA FISCAL";
-        if (usuarioLogueado.getEmpresa() != null && usuarioLogueado.getEmpresa().getRazonSocial() != null) {
-            nombreEmpresa = usuarioLogueado.getEmpresa().getRazonSocial();
-        }
-        model.addAttribute("empresaNombre", nombreEmpresa);
-        
-        return "nominas"; 
-    }
-    */
-
-    /**
      * Procesar el registro seguro de un recibo de nómina validando la pertenencia de empresa
+     * e impidiendo la generación de nóminas duplicadas para un mismo trabajador y periodo.
      */
     @PostMapping("/nominas/guardar")
     public String guardarNomina(@RequestParam("trabajadorId") Long trabajadorId,
@@ -113,9 +66,16 @@ public class NominaController {
         
         if (usuarioLogueado != null && trabajador != null) {
             
-            // BLINDAJE: Evitar que mediante alteraciones externas se registre un empleado de otra empresa
+            // BLINDAJE 1: Evitar que mediante alteraciones externas se registre un empleado de otra empresa
             if (!trabajador.getEmpresa().getId().equals(usuarioLogueado.getEmpresa().getId())) {
                 return "redirect:/operaciones/nominas?error=NoAutorizado";
+            }
+
+            // BLINDAJE 2: Validación en Backend contra Nóminas Duplicadas (Mismo trabajador y periodo)
+            boolean existeDuplicado = nominaRepository.existsByTrabajadorIdAndPeriodo(trabajadorId, periodo);
+
+            if (existeDuplicado) {
+                return "redirect:/operaciones/nominas?errorDuplicado=true";
             }
 
             Nomina nueva = new Nomina();
@@ -143,14 +103,15 @@ public class NominaController {
 
             nominaRepository.save(nueva);
 
-            // ==================== CORRECCIÓN: AUDITORÍA CON ENLACE DE EMPRESA TRACEABLE ====================
+            // REGISTRO EN AUDITORÍA TRACEABLE POR EMPRESA
             String detalles = "Generó una nómina para el empleado '" + trabajador.getUsername() 
                             + "' correspondiente al periodo '" + periodo 
                             + "' con un sueldo neto calculado de $" + String.format("%.2f", neto);
             
-            // Pasamos explícitamente la empresa del usuario logueado como cuarto parámetro
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR NÓMINA", detalles, usuarioLogueado.getEmpresa());
             auditoriaRepository.save(registro);
+
+            return "redirect:/operaciones/nominas?exito=true";
         }
 
         return "redirect:/operaciones/nominas";
@@ -193,12 +154,10 @@ public class NominaController {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            // CORRECCIÓN: Asegurada la fuente estándar Font.HELVETICA
             Font tituloFont = new Font(Font.HELVETICA, 18, Font.BOLD);
             Font subtituloFont = new Font(Font.HELVETICA, 12, Font.BOLD);
             Font cuerpoFont = new Font(Font.HELVETICA, 10, Font.NORMAL);
 
-            // CORRECCIÓN: Uso de getRazonSocial() para pintar el nombre corporativo en el PDF
             String nombreEmpresaPdf = "OFICINA FISCAL";
             if (nomina.getTrabajador().getEmpresa() != null && nomina.getTrabajador().getEmpresa().getRazonSocial() != null) {
                 nombreEmpresaPdf = nomina.getTrabajador().getEmpresa().getRazonSocial().toUpperCase();
@@ -299,12 +258,10 @@ public class NominaController {
 
             String empleadoNombre = (nomina.getTrabajador() != null) ? nomina.getTrabajador().getUsername() : "Empleado no asignado";
             
-            // ==================== CORRECCIÓN: AUDITORÍA CON ENLACE DE EMPRESA TRACEABLE ====================
             String detalles = "Eliminó el registro de nómina del empleado '" + empleadoNombre 
                             + "' correspondiente al periodo '" + nomina.getPeriodo() 
                             + "' por un monto de $" + String.format("%.2f", nomina.getSueldoNeto());
             
-            // Pasamos explícitamente la empresa del usuario logueado como cuarto parámetro
             Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR NÓMINA", detalles, usuarioLogueado.getEmpresa());
             auditoriaRepository.save(registro);
 

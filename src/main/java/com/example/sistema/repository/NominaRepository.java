@@ -23,4 +23,8 @@ public interface NominaRepository extends JpaRepository<Nomina, Long> {
     // 3. FILTRADO PARA EMPLEADOS:
     // Por si un empleado común entra a ver su historial, solo verá sus propios recibos
     List<Nomina> findByTrabajadorOrderByFechaEmisionDesc(Usuario trabajador);
+
+    // 4. PREVENCIÓN DE DUPLICADOS:
+    // Comprueba si el trabajador ya tiene un recibo de nómina emitido para un periodo en específico
+    boolean existsByTrabajadorIdAndPeriodo(Long trabajadorId, String periodo);
 }
