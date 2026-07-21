@@ -129,7 +129,7 @@
     <div class="d-flex">
         <div class="sidebar">
             <div class="sidebar-brand">
-                <span th:text="${usuarioLogueado != null and usuarioLogueado.empresa != null ? usuarioLogueado.empresa.razonSocial : (#authentication.principal != 'anonymousUser' and #authentication.principal.usuario != null and #authentication.principal.usuario.empresa != null ? #authentication.principal.usuario.empresa.razonSocial : (empresaNombre != null and empresaNombre != 'OFICINA FISCAL' ? empresaNombre : 'Sistema Contable'))}">Sistema Contable</span>
+                <span th:text="${usuarioLogueado?.empresa?.razonSocial ?: (empresaNombre != null and empresaNombre != 'OFICINA FISCAL' ? empresaNombre : 'Sistema Contable')}">Sistema Contable</span>
             </div>
             
             <ul class="sidebar-menu mt-2">
@@ -172,7 +172,7 @@
             <div class="sidebar-footer">
                 <a th:href="@{/perfil}" class="text-decoration-none" style="display: block;">
                     <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                        <img th:src="${usuarioLogueado != null and usuarioLogueado.fotoUrl != null ? usuarioLogueado.fotoUrl : 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="User Profile">
+                        <img th:src="${usuarioLogueado?.fotoUrl ?: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="User Profile">
                         <div class="user-info">
                             <span sec:authentication="name">Usuario</span>
                             <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>

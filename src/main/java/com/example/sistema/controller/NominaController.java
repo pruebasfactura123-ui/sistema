@@ -41,6 +41,48 @@ public class NominaController {
     private AuditoriaRepository auditoriaRepository;
 
     /**
+     * Muestra la vista principal de gestión de nóminas cargando los datos
+     * filtrados por el rol y la empresa correspondiente.
+     */
+    @GetMapping("/nominas")
+    public String listarNominas(Model model, Authentication authentication) {
+        if (authentication == null) {
+            return "redirect:/login";
+        }
+
+        String usernameActivo = authentication.getName();
+        Usuario usuarioLogueado = usuarioRepository.findByUsername(usernameActivo).orElse(null);
+
+        if (usuarioLogueado == null) {
+            return "redirect:/login";
+        }
+
+        List<Nomina> nominas;
+        List<Usuario> trabajadores;
+
+        if ("JEFE".equals(usuarioLogueado.getRol()) || "GERENTE".equals(usuarioLogueado.getRol()) || "ADMIN".equals(usuarioLogueado.getRol())) {
+            Long empresaId = (usuarioLogueado.getEmpresa() != null) ? usuarioLogueado.getEmpresa().getId() : null;
+            nominas = nominaRepository.findByTrabajadorEmpresaIdOrderByFechaEmisionDesc(empresaId);
+            trabajadores = usuarioRepository.findByEmpresaId(empresaId);
+        } else {
+            nominas = nominaRepository.findByTrabajadorOrderByFechaEmisionDesc(usuarioLogueado);
+            trabajadores = List.of(usuarioLogueado);
+        }
+
+        model.addAttribute("usuarioLogueado", usuarioLogueado);
+        model.addAttribute("nominas", nominas);
+        model.addAttribute("trabajadores", trabajadores);
+
+        String nombreEmpresa = "OFICINA FISCAL";
+        if (usuarioLogueado.getEmpresa() != null && usuarioLogueado.getEmpresa().getRazonSocial() != null) {
+            nombreEmpresa = usuarioLogueado.getEmpresa().getRazonSocial();
+        }
+        model.addAttribute("empresaNombre", nombreEmpresa);
+
+        return "nominas";
+        }
+
+    /**
      * Procesar el registro seguro de un recibo de nómina validando la pertenencia de empresa
      * e impidiendo la generación de nóminas duplicadas para un mismo trabajador y periodo.
      */
@@ -57,17 +99,18 @@ public class NominaController {
                                 @RequestParam("estado") String estado,
                                 @RequestParam("fechaEmision") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate fechaEmision,
                                 Authentication authentication) {
-        
+
         if (authentication == null) return "redirect:/login";
 
         String usuarioActivo = authentication.getName();
         Usuario usuarioLogueado = usuarioRepository.findByUsername(usuarioActivo).orElse(null);
         Usuario trabajador = usuarioRepository.findById(trabajadorId).orElse(null);
-        
+
         if (usuarioLogueado != null && trabajador != null) {
-            
+
             // BLINDAJE 1: Evitar que mediante alteraciones externas se registre un empleado de otra empresa
-            if (!trabajador.getEmpresa().getId().equals(usuarioLogueado.getEmpresa().getId())) {
+            if (usuarioLogueado.getEmpresa() != null && trabajador.getEmpresa() != null &&
+                !trabajador.getEmpresa().getId().equals(usuarioLogueado.getEmpresa().getId())) {
                 return "redirect:/operaciones/nominas?error=NoAutorizado";
             }
 
@@ -97,17 +140,17 @@ public class NominaController {
 
             Double neto = sueldoBase + totalPercepciones - totalDeducciones;
             nueva.setSueldoNeto(neto);
-            
+
             nueva.setEstado(estado);
             nueva.setFechaEmision(fechaEmision);
 
             nominaRepository.save(nueva);
 
             // REGISTRO EN AUDITORÍA TRACEABLE POR EMPRESA
-            String detalles = "Generó una nómina para el empleado '" + trabajador.getUsername() 
-                            + "' correspondiente al periodo '" + periodo 
+            String detalles = "Generó una nómina para el empleado '" + trabajador.getUsername()
+                            + "' correspondiente al periodo '" + periodo
                             + "' con un sueldo neto calculado de $" + String.format("%.2f", neto);
-            
+
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR NÓMINA", detalles, usuarioLogueado.getEmpresa());
             auditoriaRepository.save(registro);
 
@@ -129,22 +172,22 @@ public class NominaController {
         String usernameActivo = authentication.getName();
         Usuario usuarioLogueado = usuarioRepository.findByUsername(usernameActivo).orElse(null);
         Nomina nomina = nominaRepository.findById(id).orElse(null);
-        
+
         if (nomina == null || nomina.getTrabajador() == null || usuarioLogueado == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
         // BLINDAJE: Si no es Admin global y la nómina no es de su propia empresa, bloquear acceso
-        if (!usuarioLogueado.getRol().equals("ADMIN")) {
-            Long empresaUsuario = usuarioLogueado.getEmpresa().getId();
-            Long empresaNomina = nomina.getTrabajador().getEmpresa().getId();
-            
+        if (!"ADMIN".equals(usuarioLogueado.getRol())) {
+            Long empresaUsuario = (usuarioLogueado.getEmpresa() != null) ? usuarioLogueado.getEmpresa().getId() : null;
+            Long empresaNomina = (nomina.getTrabajador().getEmpresa() != null) ? nomina.getTrabajador().getEmpresa().getId() : null;
+
             // Validar si es un empleado común tratando de husmear la nómina de otro
-            if (usuarioLogueado.getRol().equals("EMPLEADO") && !nomina.getTrabajador().getId().equals(usuarioLogueado.getId())) {
+            if ("EMPLEADO".equals(usuarioLogueado.getRol()) && !nomina.getTrabajador().getId().equals(usuarioLogueado.getId())) {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
             }
             // Validar si es un Jefe intentando descargar datos de otra empresa distinta
-            if (!empresaUsuario.equals(empresaNomina)) {
+            if (empresaUsuario != null && !empresaUsuario.equals(empresaNomina)) {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
             }
         }
@@ -174,10 +217,10 @@ public class NominaController {
             PdfPTable tableGeneral = new PdfPTable(2);
             tableGeneral.setWidthPercentage(100);
             tableGeneral.setSpacingAfter(15);
-            
+
             tableGeneral.addCell(new Paragraph("Empleado:", cuerpoFont));
             tableGeneral.addCell(new Paragraph(nomina.getTrabajador().getUsername(), cuerpoFont));
-            
+
             tableGeneral.addCell(new Paragraph("Periodo:", cuerpoFont));
             tableGeneral.addCell(new Paragraph(nomina.getPeriodo(), cuerpoFont));
 
@@ -186,13 +229,13 @@ public class NominaController {
 
             tableGeneral.addCell(new Paragraph("Horas Extra / Faltas / Retardos:", cuerpoFont));
             tableGeneral.addCell(new Paragraph(nomina.getHorasExtra() + " hrs / " + nomina.getFaltas() + " faltas / " + nomina.getRetardos() + " ret.", cuerpoFont));
-            
+
             tableGeneral.addCell(new Paragraph("Fecha de Emisión:", cuerpoFont));
             tableGeneral.addCell(new Paragraph(nomina.getFechaEmision().toString(), cuerpoFont));
-            
+
             tableGeneral.addCell(new Paragraph("Estado de Pago:", cuerpoFont));
             tableGeneral.addCell(new Paragraph(nomina.getEstado(), cuerpoFont));
-            
+
             document.add(tableGeneral);
 
             PdfPTable tableDesglose = new PdfPTable(2);
@@ -246,22 +289,23 @@ public class NominaController {
         Nomina nomina = nominaRepository.findById(id).orElse(null);
 
         if (nomina != null && usuarioLogueado != null) {
-            
+
             // BLINDAJE: Bloquear si un jefe intenta mandar un ID por URL de una nómina ajena
-            if (!usuarioLogueado.getRol().equals("ADMIN")) {
-                Long empresaUsuario = usuarioLogueado.getEmpresa().getId();
-                Long empresaNomina = nomina.getTrabajador().getEmpresa().getId();
-                if (!empresaUsuario.equals(empresaNomina)) {
+            if (!"ADMIN".equals(usuarioLogueado.getRol())) {
+                Long empresaUsuario = (usuarioLogueado.getEmpresa() != null) ? usuarioLogueado.getEmpresa().getId() : null;
+                Long empresaNomina = (nomina.getTrabajador().getEmpresa() != null) ? nomina.getTrabajador().getEmpresa().getId() : null;
+
+                if (empresaUsuario != null && !empresaUsuario.equals(empresaNomina)) {
                     return "redirect:/operaciones/nominas?error=NoAutorizado";
                 }
             }
 
             String empleadoNombre = (nomina.getTrabajador() != null) ? nomina.getTrabajador().getUsername() : "Empleado no asignado";
-            
+
             String detalles = "Eliminó el registro de nómina del empleado '" + empleadoNombre 
                             + "' correspondiente al periodo '" + nomina.getPeriodo() 
                             + "' por un monto de $" + String.format("%.2f", nomina.getSueldoNeto());
-            
+
             Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR NÓMINA", detalles, usuarioLogueado.getEmpresa());
             auditoriaRepository.save(registro);
 
