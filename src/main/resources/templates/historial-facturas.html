@@ -13,7 +13,6 @@
             --sidebar-width: 260px;
             --text-muted: #64748b;
             --accent: #3b82f6;
-            /* Variables de color agregadas */
             --verde-ingreso: #10b981;
             --rojo-egreso: #ef4444;
         }
@@ -237,7 +236,10 @@
                         <tbody>
                             <tr th:each="f : ${facturas}">
                                 <td class="text-muted fw-semibold" th:text="${f.fecha != null ? #temporals.format(f.fecha, 'dd/MM/yyyy') : '---'}">2026-05-14</td>
-                                <td class="fw-bold text-secondary col-filtrar" th:text="${f.nombreCliente != null ? f.nombreCliente + ' (' + f.rfcCliente + ')' : f.rfcCliente}">USUARIO PRUEBA ESTADIA</td>
+                                
+                                <!-- CORREGIDO: Se reemplaza f.nombreCliente por f.rfcCliente -->
+                                <td class="fw-bold text-secondary col-filtrar" th:text="${f.rfcCliente != null ? f.rfcCliente : 'Sin RFC'}">USUARIO PRUEBA ESTADIA</td>
+                                
                                 <td>
                                     <span th:class="${f.tipo == 'INGRESO' ? 'badge-ingreso' : 'badge-egreso'}" th:text="${f.tipo}">EGRESO</span>
                                 </td>
