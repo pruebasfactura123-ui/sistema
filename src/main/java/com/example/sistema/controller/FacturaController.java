@@ -748,7 +748,7 @@ public class FacturaController {
     // =========================================================================
     // 3. GENERACIÓN DE REPORTES PDF MEJORADA (OPENPDF)
     // =========================================================================
-    @GetMapping("/descargar-pdf/{identificador}")
+   @GetMapping("/descargar-pdf/{identificador}")
     @ResponseBody
     public ResponseEntity<Resource> descargarPdf(Principal principal, @PathVariable String identificador) {
         try {
@@ -772,25 +772,33 @@ public class FacturaController {
             double iva = 0.00;
             String tipo = "INGRESO";
             String fecha = LocalDate.now().toString();
+            String descripcionConceptos = "Servicios Profesionales / Facturación General"; // Respaldo por defecto
 
             // Buscar en BD si el identificador es numérico
+            // Buscar en BD si el identificador es numérico
             if (identificador.matches("^\\d+$")) {
-                Optional<Factura> fOpt = facturaRepository.findById(Long.parseLong(identificador));
-                if (fOpt.isPresent()) {
-                    Factura f = fOpt.get();
-                    if (f.getEmpresa().getId().equals(idEmpresa)) {
-                        rfcCliente = f.getRfcCliente() != null ? f.getRfcCliente() : rfcCliente;
-                        total = f.getTotal() != null ? f.getTotal() : 0.00;
-                        subtotal = f.getSubtotal() != null ? f.getSubtotal() : total;
-                        iva = f.getIva() != null ? f.getIva() : 0.00;
-                        tipo = f.getTipo() != null ? f.getTipo().toUpperCase() : tipo;
-                        fecha = f.getFecha() != null ? f.getFecha().toString() : fecha;
-                        if (f.getNombreArchivo() != null) {
-                            nombreArchivo = f.getNombreArchivo().replace(".xml", ".pdf");
-                        }
-                    }
-                }
+    Optional<Factura> fOpt = facturaRepository.findById(Long.parseLong(identificador));
+    if (fOpt.isPresent()) {
+        Factura f = fOpt.get();
+        if (f.getEmpresa().getId().equals(idEmpresa)) {
+            rfcCliente = f.getRfcCliente() != null ? f.getRfcCliente() : rfcCliente;
+            total = f.getTotal() != null ? f.getTotal() : 0.00;
+            subtotal = f.getSubtotal() != null ? f.getSubtotal() : total;
+            iva = f.getIva() != null ? f.getIva() : 0.00;
+            tipo = f.getTipo() != null ? f.getTipo().toUpperCase() : tipo;
+            fecha = f.getFecha() != null ? f.getFecha().toString() : fecha;
+            
+            // ✅ AHORA PUEDES LLAMARLO DIRECTAMENTE SIN ERRORES NI TRY-CATCH
+            if (f.getConcepto() != null && !f.getConcepto().isEmpty()) {
+                descripcionConceptos = f.getConcepto();
             }
+
+            if (f.getNombreArchivo() != null) {
+                nombreArchivo = f.getNombreArchivo().replace(".xml", ".pdf");
+            }
+        }
+    }
+}
 
             // BÚSQUEDA DE DATOS FISCALES COMPLETOS EN LA ENTIDAD CLIENTE
             List<Cliente> clientesEncontrados = clienteRepository.findClientesPorEmpresa(idEmpresa);
@@ -874,7 +882,7 @@ public class FacturaController {
                 document.add(receptorDatos);
                 document.add(new Paragraph(" \n"));
 
-                // --- 3. TABLA DETALLE DE CONCEPTOS / SERVICIOS ---
+                // --- 3. TABLA DETALLE DE CONCEPTOS / SERVICIOS (AHORA DINÁMICO) ---
                 PdfPTable conceptosBarra = new PdfPTable(1);
                 conceptosBarra.setWidthPercentage(100);
                 PdfPCell celdaBarra2 = new PdfPCell(new Phrase("DETALLE DE CONCEPTOS Y SERVICIOS", fontSeccion));
@@ -897,15 +905,17 @@ public class FacturaController {
                     tablaConceptos.addCell(hCell);
                 }
 
-                // Fila Única o Principal de Conceptos
+                // Cantidad
                 PdfPCell cCant = new PdfPCell(new Phrase("1", fontContenido));
                 cCant.setPadding(5);
                 tablaConceptos.addCell(cCant);
 
-                PdfPCell cDesc = new PdfPCell(new Phrase("Servicios Profesionales / Facturación General", fontContenido));
+                // 2. APLICAR LA DESCRIPCIÓN DINÁMICA DE LA FACTURA
+                PdfPCell cDesc = new PdfPCell(new Phrase(descripcionConceptos, fontContenido));
                 cDesc.setPadding(5);
                 tablaConceptos.addCell(cDesc);
 
+                // Precio Unitario e Importe
                 PdfPCell cPU = new PdfPCell(new Phrase(String.format("$%.2f", subtotal), fontContenido));
                 cPU.setPadding(5);
                 cPU.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -970,7 +980,6 @@ public class FacturaController {
             return ResponseEntity.status(500).build();
         }
     }
-
     // =========================================================================
     // 4. ELIMINACIÓN DE REGISTROS FISCALES
     // =========================================================================

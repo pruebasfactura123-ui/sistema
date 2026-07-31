@@ -20,6 +20,10 @@ public class Factura {
     @Column(name = "nombre_archivo", length = 255)
     private String nombreArchivo; 
 
+    // --- NUEVO CAMPO AGREGADO ---
+    @Column(name = "concepto", columnDefinition = "VARCHAR(MAX)")
+    private String concepto;
+
     @Column(name = "subtotal")
     private Double subtotal;
 
@@ -35,7 +39,7 @@ public class Factura {
     @Column(name = "tipo", length = 50)
     private String tipo; // INGRESO o EGRESO
 
-    //  AJUSTE CLAVE PARA SQL SERVER: varchar(max) en lugar de TEXT
+    // AJUSTE CLAVE PARA SQL SERVER: varchar(max) en lugar de TEXT
     @Column(name = "estado", columnDefinition = "VARCHAR(MAX)")
     private String estado; 
 
@@ -79,7 +83,16 @@ public class Factura {
     public void setNombreArchivo(String nombreArchivo) { 
         this.nombreArchivo = nombreArchivo; 
     }
-    
+
+    // --- GETTER Y SETTER DE CONCEPTO ---
+    public String getConcepto() {
+        return concepto;
+    }
+
+    public void setConcepto(String concepto) {
+        this.concepto = concepto;
+    }
+
     public Double getSubtotal() { 
         return subtotal; 
     }
