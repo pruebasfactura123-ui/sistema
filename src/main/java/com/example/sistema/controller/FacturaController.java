@@ -394,18 +394,23 @@ public class FacturaController {
     // =========================================================================
     // 2. HISTORIAL UNIFICADO DE FACTURAS (MANUALES Y XML) - CORREGIDO
     // =========================================================================
-    @GetMapping("/facturas/historial")
+@GetMapping("/facturas/historial")
     public String historialFacturas(Principal principal, Model model) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
             
-            // Traemos todas las facturas directamente sin filtrar por "manual_"
+            // Obtener todas las facturas de la empresa
             List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
             if (todas == null) todas = new ArrayList<>();
             
+            // FILTRO: Guardar en la lista solo las facturas creadas manualmente desde la app
+            List<Factura> soloManuales = todas.stream()
+                    .filter(f -> f.getNombreArchivo() == null || f.getNombreArchivo().trim().toLowerCase().startsWith("manual_"))
+                    .collect(Collectors.toList());
+            
             model.addAttribute("usuarioLogueado", logueado);
-            model.addAttribute("facturas", todas);
+            model.addAttribute("facturas", soloManuales); // Pasamos solo las manuales a la plantilla
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
             
         } catch (Exception e) {
