@@ -209,7 +209,7 @@ public class FacturaController {
         return "nueva-factura";
     }
 
-    @PostMapping("/facturas/guardar")
+   @PostMapping("/facturas/guardar")
     @ResponseBody
     public ResponseEntity<?> guardarFacturaManual(
             @RequestParam("rfcCliente") String rfcCliente,
@@ -259,28 +259,61 @@ public class FacturaController {
             List<?> conceptosListaFrontend = mapper.readValue(conceptosJson, List.class);
             List<Map<String, Object>> itemsList = new ArrayList<>();
 
-            for(Object obj : conceptosListaFrontend) {
+            for (Object obj : conceptosListaFrontend) {
                 if (obj instanceof Map) {
                     Map<?, ?> cFront = (Map<?, ?>) obj;
+                    
+                    System.out.println("Concepto recibido del Frontend: " + cFront);
+
                     Map<String, Object> item = new HashMap<>();
                     Map<String, Object> product = new HashMap<>();
                     
-                    String descripcion = "Servicio General";
-                    if(cFront.containsKey("descripcion")) descripcion = cFront.get("descripcion").toString();
-                    
-                    double precioUnitario = cFront.containsKey("precioUnitario") ? Double.parseDouble(cFront.get("precioUnitario").toString()) : 100.00;
-                    int cantidad = cFront.containsKey("cantidad") ? Integer.parseInt(cFront.get("cantidad").toString()) : 1;
+                    // 1. CAPTURAR LA DESCRIPCIÓN EXACTA
+                    String descripcion = "";
+                    if (cFront.get("descripcion") != null && !cFront.get("descripcion").toString().isBlank()) {
+                        descripcion = cFront.get("descripcion").toString();
+                    } else if (cFront.get("concepto") != null && !cFront.get("concepto").toString().isBlank()) {
+                        descripcion = cFront.get("concepto").toString();
+                    } else if (cFront.get("descripcionConcepto") != null && !cFront.get("descripcionConcepto").toString().isBlank()) {
+                        descripcion = cFront.get("descripcionConcepto").toString();
+                    } else {
+                        for (Object val : cFront.values()) {
+                            if (val instanceof String && !((String) val).isBlank()) {
+                                descripcion = (String) val;
+                                break;
+                            }
+                        }
+                    }
 
+                    // 2. CAPTURAR EL PRECIO UNITARIO EXACTO
+                    double precioUnitario = 0.0;
+                    if (cFront.get("precioUnitario") != null) {
+                        precioUnitario = Double.parseDouble(cFront.get("precioUnitario").toString());
+                    } else if (cFront.get("valorUnitario") != null) {
+                        precioUnitario = Double.parseDouble(cFront.get("valorUnitario").toString());
+                    } else if (cFront.get("precio") != null) {
+                        precioUnitario = Double.parseDouble(cFront.get("precio").toString());
+                    }
+
+                    // 3. CAPTURAR LA CANTIDAD EXACTA
+                    int cantidad = 1;
+                    if (cFront.get("cantidad") != null) {
+                        cantidad = Integer.parseInt(cFront.get("cantidad").toString());
+                    }
+
+                    // Armar el producto para Facturapi con los datos exactos del usuario
                     product.put("description", descripcion.trim());
                     product.put("price", precioUnitario);
-                    product.put("product_key", "84111500"); 
-                    product.put("unit_key", "E48");        
+                    product.put("product_key", "01010101"); // Clave del SAT genérica para evitar rechazos
+                    product.put("unit_key", "H87");         // Clave de unidad genérica
                     
                     item.put("quantity", cantidad);
                     item.put("product", product);
+                    
                     itemsList.add(item);
                 }
             }
+        
             facturaMap.put("items", itemsList);
 
             String idFacturapi = null;
@@ -288,6 +321,7 @@ public class FacturaController {
             byte[] xmlBytes = null;
             byte[] pdfBytes = null; 
 
+            // AQUÍ ESTÁ EL BLOQUE MODIFICADO PARA VER EL ERROR REAL DE FACTURAPI
             try {
                 Invoice respuestaInvoice = facturapiApp.invoices().create(facturaMap, null);
                 idFacturapi = respuestaInvoice.getId();
@@ -297,7 +331,8 @@ public class FacturaController {
                 xmlBytes = facturapiApp.invoices().downloadXml(idFacturapi);
                 pdfBytes = facturapiApp.invoices().downloadPdf(idFacturapi); 
             } catch (Exception e) {
-                System.out.println("[SISTEMA] Modo pruebas / Excepción de Facturapi controlada.");
+                System.err.println("❌ ERROR AL GENERAR FACTURA EN FACTURAPI:");
+                e.printStackTrace(); // Imprime el error exacto en la consola de Spring Boot
             }
 
             String nombreXmlNuevo = "manual_" + uuidCfdi + ".xml";
