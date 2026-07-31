@@ -409,7 +409,7 @@
                     </div>
                 </div>
 
-                <!-- PANEL DERECHO (DONA Y AUTORIZACIÓN) -->
+                <!-- PANEL DERECHO (DONA) -->
                 <div class="col-lg-4 d-flex flex-column gap-3">
                     <div class="card-custom">
                         <h6 class="fw-bold mb-4 text-uppercase text-center text-navy" style="font-size: 0.7rem; letter-spacing: 0.5px;">
@@ -440,16 +440,6 @@
                                 <span id="lblEgresosDetalle" class="fw-bold text-navy">$0.00 (0%)</span>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')" class="card-custom bg-light" style="padding: 15px; border-color: #e2e8f0 !important;">
-                        <h6 class="fw-bold text-navy" style="font-size: 0.7rem;"><i class="fas fa-user-plus me-2 text-primary"></i>Autorizar Personal</h6>
-                        <form th:action="@{/usuarios/crear}" method="post" class="mt-2">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
-                            <input type="text" name="nuevoUsuario" class="form-control form-control-sm mb-2" placeholder="Usuario" style="font-size: 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1;" required>
-                            <input type="password" name="nuevaClave" class="form-control form-control-sm mb-2" placeholder="Contraseña" style="font-size: 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1;" required>
-                            <button type="submit" class="btn btn-navy btn-sm w-100 fw-bold rounded-pill" style="font-size: 0.65rem; padding: 6px;">Dar Acceso</button>
-                        </form>
                     </div>
                 </div>
             </div>
