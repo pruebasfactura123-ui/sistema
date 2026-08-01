@@ -210,170 +210,187 @@ public class FacturaController {
     }
 
    @PostMapping("/facturas/guardar")
-    @ResponseBody
-    public ResponseEntity<?> guardarFacturaManual(
-            @RequestParam("rfcCliente") String rfcCliente,
-            @RequestParam("nombreCliente") String nombreCliente,
-            @RequestParam("subtotal") Double subtotal,
-            @RequestParam("iva") Double iva,
-            @RequestParam("total") Double total,
-            @RequestParam("tipo") String tipo,
-            @RequestParam("metodoPago") String metodoPago,
-            @RequestParam("formaPago") String formaPago,
-            @RequestParam("conceptosJson") String conceptosJson,
-            Principal principal) {
-        try {
-            Usuario logueado = getUsuarioLogueado(principal);
-            Facturapi facturapiApp = new Facturapi(this.apiKeyFacturapi);
+@ResponseBody
+public ResponseEntity<?> guardarFacturaManual(
+        @RequestParam("rfcCliente") String rfcCliente,
+        @RequestParam("nombreCliente") String nombreCliente,
+        @RequestParam("subtotal") Double subtotal,
+        @RequestParam("iva") Double iva,
+        @RequestParam("total") Double total,
+        @RequestParam("tipo") String tipo,
+        @RequestParam("metodoPago") String metodoPago,
+        @RequestParam("formaPago") String formaPago,
+        @RequestParam("conceptosJson") String conceptosJson,
+        Principal principal) {
+    try {
+        Usuario logueado = getUsuarioLogueado(principal);
+        Facturapi facturapiApp = new Facturapi(this.apiKeyFacturapi);
 
-            Map<String, Object> facturaMap = new HashMap<>();
-            String metodoLimpio = metodoPago.contains("-") ? metodoPago.split("-")[0].trim() : metodoPago.trim();
-            String formaLimpia = formaPago.contains("-") ? formaPago.split("-")[0].trim() : formaPago.trim();
-            
-            facturaMap.put("payment_form", formaLimpia);   
-            facturaMap.put("payment_method", metodoLimpio); 
-            facturaMap.put("use", "G03");                    
+        Map<String, Object> facturaMap = new HashMap<>();
+        String metodoLimpio = metodoPago.contains("-") ? metodoPago.split("-")[0].trim() : metodoPago.trim();
+        String formaLimpia = formaPago.contains("-") ? formaPago.split("-")[0].trim() : formaPago.trim();
+        
+        facturaMap.put("payment_form", formaLimpia);   
+        facturaMap.put("payment_method", metodoLimpio); 
+        facturaMap.put("use", "G03");                    
 
-            Map<String, Object> customer = new HashMap<>();
-            Map<String, String> address = new HashMap<>();
-            
-            String rfcLimpio = rfcCliente.trim().toUpperCase();
-            customer.put("tax_id", rfcLimpio);
-            customer.put("legal_name", nombreCliente.trim().toUpperCase());
-            
-            if ("EKU9003173C9".equals(rfcLimpio)) {
-                customer.put("tax_system", "601"); 
-                address.put("zip", "23000"); 
-            } else if ("XAXX010101000".equals(rfcLimpio) || "XEXX010101000".equals(rfcLimpio)) {
-                customer.put("tax_system", "616"); 
-                address.put("zip", "06470"); 
-            } else {
-                customer.put("tax_system", "601"); 
-                address.put("zip", "06470"); 
-            }
-            
-            customer.put("address", address);
-            facturaMap.put("customer", customer);
+        Map<String, Object> customer = new HashMap<>();
+        Map<String, String> address = new HashMap<>();
+        
+        String rfcLimpio = rfcCliente.trim().toUpperCase();
+        customer.put("tax_id", rfcLimpio);
+        customer.put("legal_name", nombreCliente.trim().toUpperCase());
+        
+        if ("EKU9003173C9".equals(rfcLimpio)) {
+            customer.put("tax_system", "601"); 
+            address.put("zip", "23000"); 
+        } else if ("XAXX010101000".equals(rfcLimpio) || "XEXX010101000".equals(rfcLimpio)) {
+            customer.put("tax_system", "616"); 
+            address.put("zip", "06470"); 
+        } else {
+            customer.put("tax_system", "601"); 
+            address.put("zip", "06470"); 
+        }
+        
+        customer.put("address", address);
+        facturaMap.put("customer", customer);
 
-            ObjectMapper mapper = new ObjectMapper();
-            List<?> conceptosListaFrontend = mapper.readValue(conceptosJson, List.class);
-            List<Map<String, Object>> itemsList = new ArrayList<>();
+        ObjectMapper mapper = new ObjectMapper();
+        List<?> conceptosListaFrontend = mapper.readValue(conceptosJson, List.class);
+        List<Map<String, Object>> itemsList = new ArrayList<>();
 
-            for (Object obj : conceptosListaFrontend) {
-                if (obj instanceof Map) {
-                    Map<?, ?> cFront = (Map<?, ?>) obj;
-                    
-                    System.out.println("Concepto recibido del Frontend: " + cFront);
+        // 🟢 VARIABLE PARA ACUMULAR LAS DESCRIPCIONES PARA EL PDF
+        StringBuilder conceptoConcatenado = new StringBuilder();
 
-                    Map<String, Object> item = new HashMap<>();
-                    Map<String, Object> product = new HashMap<>();
-                    
-                    // 1. CAPTURAR LA DESCRIPCIÓN EXACTA
-                    String descripcion = "";
-                    if (cFront.get("descripcion") != null && !cFront.get("descripcion").toString().isBlank()) {
-                        descripcion = cFront.get("descripcion").toString();
-                    } else if (cFront.get("concepto") != null && !cFront.get("concepto").toString().isBlank()) {
-                        descripcion = cFront.get("concepto").toString();
-                    } else if (cFront.get("descripcionConcepto") != null && !cFront.get("descripcionConcepto").toString().isBlank()) {
-                        descripcion = cFront.get("descripcionConcepto").toString();
-                    } else {
-                        for (Object val : cFront.values()) {
-                            if (val instanceof String && !((String) val).isBlank()) {
-                                descripcion = (String) val;
-                                break;
-                            }
+        for (Object obj : conceptosListaFrontend) {
+            if (obj instanceof Map) {
+                Map<?, ?> cFront = (Map<?, ?>) obj;
+                
+                System.out.println("Concepto recibido del Frontend: " + cFront);
+
+                Map<String, Object> item = new HashMap<>();
+                Map<String, Object> product = new HashMap<>();
+                
+                // 1. CAPTURAR LA DESCRIPCIÓN EXACTA
+                String descripcion = "";
+                if (cFront.get("descripcion") != null && !cFront.get("descripcion").toString().isBlank()) {
+                    descripcion = cFront.get("descripcion").toString();
+                } else if (cFront.get("concepto") != null && !cFront.get("concepto").toString().isBlank()) {
+                    descripcion = cFront.get("concepto").toString();
+                } else if (cFront.get("descripcionConcepto") != null && !cFront.get("descripcionConcepto").toString().isBlank()) {
+                    descripcion = cFront.get("descripcionConcepto").toString();
+                } else {
+                    for (Object val : cFront.values()) {
+                        if (val instanceof String && !((String) val).isBlank()) {
+                            descripcion = (String) val;
+                            break;
                         }
                     }
-
-                    // 2. CAPTURAR EL PRECIO UNITARIO EXACTO
-                    double precioUnitario = 0.0;
-                    if (cFront.get("precioUnitario") != null) {
-                        precioUnitario = Double.parseDouble(cFront.get("precioUnitario").toString());
-                    } else if (cFront.get("valorUnitario") != null) {
-                        precioUnitario = Double.parseDouble(cFront.get("valorUnitario").toString());
-                    } else if (cFront.get("precio") != null) {
-                        precioUnitario = Double.parseDouble(cFront.get("precio").toString());
-                    }
-
-                    // 3. CAPTURAR LA CANTIDAD EXACTA
-                    int cantidad = 1;
-                    if (cFront.get("cantidad") != null) {
-                        cantidad = Integer.parseInt(cFront.get("cantidad").toString());
-                    }
-
-                    // Armar el producto para Facturapi con los datos exactos del usuario
-                    product.put("description", descripcion.trim());
-                    product.put("price", precioUnitario);
-                    product.put("product_key", "01010101"); // Clave del SAT genérica para evitar rechazos
-                    product.put("unit_key", "H87");         // Clave de unidad genérica
-                    
-                    item.put("quantity", cantidad);
-                    item.put("product", product);
-                    
-                    itemsList.add(item);
                 }
-            }
-        
-            facturaMap.put("items", itemsList);
 
-            String idFacturapi = null;
-            String uuidCfdi = UUID.randomUUID().toString(); 
-            byte[] xmlBytes = null;
-            byte[] pdfBytes = null; 
-
-            // AQUÍ ESTÁ EL BLOQUE MODIFICADO PARA VER EL ERROR REAL DE FACTURAPI
-            try {
-                Invoice respuestaInvoice = facturapiApp.invoices().create(facturaMap, null);
-                idFacturapi = respuestaInvoice.getId();
-                if (respuestaInvoice.getUuid() != null) {
-                    uuidCfdi = respuestaInvoice.getUuid();
+                // 🟢 CONCATENAR PARA GUARDAR EN BD
+                if (!descripcion.isBlank()) {
+                    if (conceptoConcatenado.length() > 0) {
+                        conceptoConcatenado.append(", ");
+                    }
+                    conceptoConcatenado.append(descripcion.trim());
                 }
-                xmlBytes = facturapiApp.invoices().downloadXml(idFacturapi);
-                pdfBytes = facturapiApp.invoices().downloadPdf(idFacturapi); 
-            } catch (Exception e) {
-                System.err.println("❌ ERROR AL GENERAR FACTURA EN FACTURAPI:");
-                e.printStackTrace(); // Imprime el error exacto en la consola de Spring Boot
+
+                // 2. CAPTURAR EL PRECIO UNITARIO EXACTO
+                double precioUnitario = 0.0;
+                if (cFront.get("precioUnitario") != null) {
+                    precioUnitario = Double.parseDouble(cFront.get("precioUnitario").toString());
+                } else if (cFront.get("valorUnitario") != null) {
+                    precioUnitario = Double.parseDouble(cFront.get("valorUnitario").toString());
+                } else if (cFront.get("precio") != null) {
+                    precioUnitario = Double.parseDouble(cFront.get("precio").toString());
+                }
+
+                // 3. CAPTURAR LA CANTIDAD EXACTA
+                int cantidad = 1;
+                if (cFront.get("cantidad") != null) {
+                    cantidad = Integer.parseInt(cFront.get("cantidad").toString());
+                }
+
+                // Armar el producto para Facturapi con los datos exactos del usuario
+                product.put("description", descripcion.trim());
+                product.put("price", precioUnitario);
+                product.put("product_key", "01010101"); // Clave del SAT genérica para evitar rechazos
+                product.put("unit_key", "H87");         // Clave de unidad genérica
+                
+                item.put("quantity", cantidad);
+                item.put("product", product);
+                
+                itemsList.add(item);
             }
-
-            String nombreXmlNuevo = "manual_" + uuidCfdi + ".xml";
-            String nombrePdfNuevo = "manual_" + uuidCfdi + ".pdf";
-            String rutaDirectorio = BASE_PATH + logueado.getEmpresa().getId() + "/";
-            File dir = new File(rutaDirectorio);
-            if (!dir.exists()) dir.mkdirs();
-            
-            if (xmlBytes != null) {
-                Files.write(Paths.get(rutaDirectorio + nombreXmlNuevo), xmlBytes); 
-            }
-            if (pdfBytes != null) {
-                Files.write(Paths.get(rutaDirectorio + nombrePdfNuevo), pdfBytes); 
-            }
-
-            Factura factura = new Factura();
-            factura.setRfcEmisor(logueado.getEmpresa().getRfc());
-            factura.setRfcCliente(rfcLimpio);
-            factura.setSubtotal(subtotal);
-            factura.setIva(iva);
-            factura.setTotal(total);
-            factura.setFecha(LocalDate.now());
-            factura.setTipo(tipo);
-            factura.setNombreArchivo(nombreXmlNuevo); 
-            factura.setEstado("TIMBRADA"); 
-            factura.setEmpresa(logueado.getEmpresa());
-
-            facturaRepository.save(factura);
-
-            String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-            String detalles = "Creó factura manual (" + tipo + ") Folio: " + uuidCfdi 
-                            + " para el Cliente: " + rfcLimpio + " por un Total de $" + String.format("%.2f", total);
-            Auditoria registro = new Auditoria(usuarioActivo, "CREAR FACTURA MANUAL", detalles, logueado.getEmpresa());
-            auditoriaRepository.save(registro);
-
-            return ResponseEntity.ok().body("{\"status\":\"success\",\"uuid\":\"" + uuidCfdi + "\",\"id\":" + factura.getId() + "}");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(400).body("{\"status\":\"error\",\"message\":\"" + e.getMessage() + "\"}");
         }
+    
+        facturaMap.put("items", itemsList);
+
+        String idFacturapi = null;
+        String uuidCfdi = UUID.randomUUID().toString(); 
+        byte[] xmlBytes = null;
+        byte[] pdfBytes = null; 
+
+        try {
+            Invoice respuestaInvoice = facturapiApp.invoices().create(facturaMap, null);
+            idFacturapi = respuestaInvoice.getId();
+            if (respuestaInvoice.getUuid() != null) {
+                uuidCfdi = respuestaInvoice.getUuid();
+            }
+            xmlBytes = facturapiApp.invoices().downloadXml(idFacturapi);
+            pdfBytes = facturapiApp.invoices().downloadPdf(idFacturapi); 
+        } catch (Exception e) {
+            System.err.println("❌ ERROR AL GENERAR FACTURA EN FACTURAPI:");
+            e.printStackTrace();
+        }
+
+        String nombreXmlNuevo = "manual_" + uuidCfdi + ".xml";
+        String nombrePdfNuevo = "manual_" + uuidCfdi + ".pdf";
+        String rutaDirectorio = BASE_PATH + logueado.getEmpresa().getId() + "/";
+        File dir = new File(rutaDirectorio);
+        if (!dir.exists()) dir.mkdirs();
+        
+        if (xmlBytes != null) {
+            Files.write(Paths.get(rutaDirectorio + nombreXmlNuevo), xmlBytes); 
+        }
+        if (pdfBytes != null) {
+            Files.write(Paths.get(rutaDirectorio + nombrePdfNuevo), pdfBytes); 
+        }
+
+        Factura factura = new Factura();
+        factura.setRfcEmisor(logueado.getEmpresa().getRfc());
+        factura.setRfcCliente(rfcLimpio);
+        factura.setSubtotal(subtotal);
+        factura.setIva(iva);
+        factura.setTotal(total);
+        factura.setFecha(LocalDate.now());
+        factura.setTipo(tipo);
+        factura.setNombreArchivo(nombreXmlNuevo); 
+        factura.setEstado("TIMBRADA"); 
+        factura.setEmpresa(logueado.getEmpresa());
+
+        // 🟢 ASIGNAR EL CONCEPTO A LA FACTURA
+        String conceptoFinal = conceptoConcatenado.toString();
+        if (conceptoFinal.isBlank()) {
+            conceptoFinal = "Servicios Profesionales / Facturación General";
+        }
+        factura.setConcepto(conceptoFinal);
+
+        facturaRepository.save(factura);
+
+        String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
+        String detalles = "Creó factura manual (" + tipo + ") Folio: " + uuidCfdi 
+                        + " para el Cliente: " + rfcLimpio + " por un Total de $" + String.format("%.2f", total);
+        Auditoria registro = new Auditoria(usuarioActivo, "CREAR FACTURA MANUAL", detalles, logueado.getEmpresa());
+        auditoriaRepository.save(registro);
+
+        return ResponseEntity.ok().body("{\"status\":\"success\",\"uuid\":\"" + uuidCfdi + "\",\"id\":" + factura.getId() + "}");
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(400).body("{\"status\":\"error\",\"message\":\"" + e.getMessage() + "\"}");
     }
+}
 
     @GetMapping("/facturas/obtener/{id}")
     @ResponseBody
