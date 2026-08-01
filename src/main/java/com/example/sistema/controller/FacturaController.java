@@ -51,94 +51,112 @@ import java.awt.Color;
 @Controller
 public class FacturaController {
 
-    @Autowired private FacturaRepository facturaRepository;
-    @Autowired private UsuarioRepository usuarioRepository;
-    @Autowired private EmpresaRepository empresaRepository;
-    @Autowired private ClienteRepository clienteRepository;
-    @Autowired private PasswordEncoder passwordEncoder;
-    @Autowired private AuditoriaRepository auditoriaRepository;
+    @Autowired
+    private FacturaRepository facturaRepository;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    @Autowired
+    private EmpresaRepository empresaRepository;
+    @Autowired
+    private ClienteRepository clienteRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private AuditoriaRepository auditoriaRepository;
 
     private final String apiKeyFacturapi = "sk_test_tG9FGgQXufEjgoQ5DobnVawKTiiNxiTXFMQady6aTT";
     private static final String BASE_PATH = System.getProperty("java.io.tmpdir") + "/facturas_xml/";
 
     private Usuario getUsuarioLogueado(Principal principal) {
-        if (principal == null) throw new RuntimeException("No hay ninguna sesión activa.");
-        
+        if (principal == null)
+            throw new RuntimeException("No hay ninguna sesión activa.");
+
         Usuario usuario = usuarioRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado en el sistema."));
-        
+
         // PARCHE DE BLINDAJE MULTIEMPRESA PARA EL USUARIO ADMINISTRADOR GENERAL
         if ("admin".equalsIgnoreCase(usuario.getUsername()) && usuario.getEmpresa() == null) {
             List<Empresa> empresas = empresaRepository.findAll();
             if (!empresas.isEmpty()) {
                 usuario.setEmpresa(empresas.get(0));
             } else {
-                throw new RuntimeException("El usuario admin requiere que exista al menos una empresa registrada en la Base de Datos.");
+                throw new RuntimeException(
+                        "El usuario admin requiere que exista al menos una empresa registrada en la Base de Datos.");
             }
         }
         return usuario;
     }
 
     @GetMapping("/login")
-    public String login() { return "login"; }
+    public String login() {
+        return "login";
+    }
 
     @GetMapping("/registrar-empresa")
-    public String vistaRegistro() { return "registrar-empresa"; }
+    public String vistaRegistro() {
+        return "registrar-empresa";
+    }
 
     @PostMapping("/registrar-empresa")
-    public String registrarEmpresaYJefe(@RequestParam String razonSocial, @RequestParam String rfc, @RequestParam String username, @RequestParam String password) {
+    public String registrarEmpresaYJefe(@RequestParam String razonSocial, @RequestParam String rfc,
+            @RequestParam String username, @RequestParam String password) {
         try {
             Empresa emp = new Empresa();
             emp.setRazonSocial(razonSocial.trim());
             emp.setRfc(rfc.trim().toUpperCase());
             Empresa empresaGuardada = empresaRepository.save(emp);
-            
+
             Usuario jefe = new Usuario();
             jefe.setUsername(username.trim());
             jefe.setPassword(passwordEncoder.encode(password.trim()));
-            jefe.setRol("JEFE"); 
+            jefe.setRol("JEFE");
             jefe.setEmpresa(empresaGuardada);
             jefe.setFotoUrl("https://cdn-icons-png.flaticon.com/512/3135/3135715.png");
-            
+
             usuarioRepository.save(jefe);
             return "redirect:/login?empresaCreada";
-        } catch (Exception e) { e.printStackTrace(); return "redirect:/registrar-empresa?error"; }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "redirect:/registrar-empresa?error";
+        }
     }
 
     // =========================================================================
     // 1. DASHBOARD PRINCIPAL (Muestra Ingresos y Egresos de XML subidos)
     // =========================================================================
     @GetMapping("/")
-    public String inicio(Principal principal, 
-                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio, 
-                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin, 
-                         @RequestParam(required = false) String errorPermisoFactura,
-                         Model model) {
+    public String inicio(Principal principal,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) String errorPermisoFactura,
+            Model model) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
-            
+
             // Carga limpia desde repositorio
-            List<Factura> todasLasFacturas = (fechaInicio != null && fechaFin != null) 
-                    ? facturaRepository.findByEmpresaIdAndFechaBetween(idEmpresa, fechaInicio, fechaFin) 
+            List<Factura> todasLasFacturas = (fechaInicio != null && fechaFin != null)
+                    ? facturaRepository.findByEmpresaIdAndFechaBetween(idEmpresa, fechaInicio, fechaFin)
                     : facturaRepository.findByEmpresaId(idEmpresa);
-                    
-            if (todasLasFacturas == null) todasLasFacturas = new ArrayList<>();
-            
+
+            if (todasLasFacturas == null)
+                todasLasFacturas = new ArrayList<>();
+
             // Filtro seguro para archivos XML
             List<Factura> comprobantesXml = todasLasFacturas.stream()
-                    .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().trim().toLowerCase().startsWith("manual_"))
+                    .filter(f -> f.getNombreArchivo() != null
+                            && !f.getNombreArchivo().trim().toLowerCase().startsWith("manual_"))
                     .collect(Collectors.toList());
-            
+
             // Sumatorias limpias ignorando mayúsculas/minúsculas o espacios
             double ingresos = comprobantesXml.stream()
                     .filter(f -> f.getTipo() != null && "INGRESO".equalsIgnoreCase(f.getTipo().trim()))
                     .mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
-                    
+
             double egresos = comprobantesXml.stream()
                     .filter(f -> f.getTipo() != null && "EGRESO".equalsIgnoreCase(f.getTipo().trim()))
                     .mapToDouble(f -> f.getTotal() != null ? f.getTotal() : 0.0).sum();
-            
+
             double[] ingresosMeses = new double[12];
             double[] egresosMeses = new double[12];
 
@@ -163,24 +181,25 @@ public class FacturaController {
             }
 
             model.addAttribute("usuarioLogueado", logueado);
-            
-            // SOLUCIÓN DOBLE: Seteamos ambos nombres para evitar cualquier desajuste con el index.html
-            model.addAttribute("comprobantes", comprobantesXml); 
-            model.addAttribute("facturas", comprobantesXml); 
-            
+
+            // SOLUCIÓN DOBLE: Seteamos ambos nombres para evitar cualquier desajuste con el
+            // index.html
+            model.addAttribute("comprobantes", comprobantesXml);
+            model.addAttribute("facturas", comprobantesXml);
+
             // Tarjetas superiores del Dashboard
             model.addAttribute("subtotalTotal", ingresos);
             model.addAttribute("ivaTrasladado", ingresos * 0.16);
-            model.addAttribute("totalNeto", ingresos - egresos); 
+            model.addAttribute("totalNeto", ingresos - egresos);
             model.addAttribute("xmlProcesados", comprobantesXml.size());
-            
+
             // Siempre toma la razón social de la empresa
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            
-        } catch (Exception e) { 
+
+        } catch (Exception e) {
             e.printStackTrace();
-            model.addAttribute("comprobantes", new ArrayList<>()); 
-            model.addAttribute("facturas", new ArrayList<>()); 
+            model.addAttribute("comprobantes", new ArrayList<>());
+            model.addAttribute("facturas", new ArrayList<>());
         }
         return "index";
     }
@@ -191,16 +210,16 @@ public class FacturaController {
             Usuario logueado = getUsuarioLogueado(principal);
             model.addAttribute("usuarioLogueado", logueado);
             Long empresaId = logueado.getEmpresa().getId();
-            
+
             List<Cliente> listaClientes = clienteRepository.findClientesPorEmpresa(empresaId);
             if (listaClientes == null) {
                 listaClientes = new ArrayList<>();
             }
-            
+
             model.addAttribute("clientes", listaClientes);
             model.addAttribute("empresaRfc", logueado.getEmpresa().getRfc());
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("clientes", new ArrayList<>());
@@ -209,188 +228,191 @@ public class FacturaController {
         return "nueva-factura";
     }
 
-   @PostMapping("/facturas/guardar")
-@ResponseBody
-public ResponseEntity<?> guardarFacturaManual(
-        @RequestParam("rfcCliente") String rfcCliente,
-        @RequestParam("nombreCliente") String nombreCliente,
-        @RequestParam("subtotal") Double subtotal,
-        @RequestParam("iva") Double iva,
-        @RequestParam("total") Double total,
-        @RequestParam("tipo") String tipo,
-        @RequestParam("metodoPago") String metodoPago,
-        @RequestParam("formaPago") String formaPago,
-        @RequestParam("conceptosJson") String conceptosJson,
-        Principal principal) {
-    try {
-        Usuario logueado = getUsuarioLogueado(principal);
-        Facturapi facturapiApp = new Facturapi(this.apiKeyFacturapi);
+    @PostMapping("/facturas/guardar")
+    @ResponseBody
+    public ResponseEntity<?> guardarFacturaManual(
+            @RequestParam("rfcCliente") String rfcCliente,
+            @RequestParam("nombreCliente") String nombreCliente,
+            @RequestParam("subtotal") Double subtotal,
+            @RequestParam("iva") Double iva,
+            @RequestParam("total") Double total,
+            @RequestParam("tipo") String tipo,
+            @RequestParam("metodoPago") String metodoPago,
+            @RequestParam("formaPago") String formaPago,
+            @RequestParam("conceptosJson") String conceptosJson,
+            Principal principal) {
+        try {
+            Usuario logueado = getUsuarioLogueado(principal);
+            Facturapi facturapiApp = new Facturapi(this.apiKeyFacturapi);
 
-        Map<String, Object> facturaMap = new HashMap<>();
-        String metodoLimpio = metodoPago.contains("-") ? metodoPago.split("-")[0].trim() : metodoPago.trim();
-        String formaLimpia = formaPago.contains("-") ? formaPago.split("-")[0].trim() : formaPago.trim();
-        
-        facturaMap.put("payment_form", formaLimpia);   
-        facturaMap.put("payment_method", metodoLimpio); 
-        facturaMap.put("use", "G03");                    
+            Map<String, Object> facturaMap = new HashMap<>();
+            String metodoLimpio = metodoPago.contains("-") ? metodoPago.split("-")[0].trim() : metodoPago.trim();
+            String formaLimpia = formaPago.contains("-") ? formaPago.split("-")[0].trim() : formaPago.trim();
 
-        Map<String, Object> customer = new HashMap<>();
-        Map<String, String> address = new HashMap<>();
-        
-        String rfcLimpio = rfcCliente.trim().toUpperCase();
-        customer.put("tax_id", rfcLimpio);
-        customer.put("legal_name", nombreCliente.trim().toUpperCase());
-        
-        if ("EKU9003173C9".equals(rfcLimpio)) {
-            customer.put("tax_system", "601"); 
-            address.put("zip", "23000"); 
-        } else if ("XAXX010101000".equals(rfcLimpio) || "XEXX010101000".equals(rfcLimpio)) {
-            customer.put("tax_system", "616"); 
-            address.put("zip", "06470"); 
-        } else {
-            customer.put("tax_system", "601"); 
-            address.put("zip", "06470"); 
-        }
-        
-        customer.put("address", address);
-        facturaMap.put("customer", customer);
+            facturaMap.put("payment_form", formaLimpia);
+            facturaMap.put("payment_method", metodoLimpio);
+            facturaMap.put("use", "G03");
 
-        ObjectMapper mapper = new ObjectMapper();
-        List<?> conceptosListaFrontend = mapper.readValue(conceptosJson, List.class);
-        List<Map<String, Object>> itemsList = new ArrayList<>();
+            Map<String, Object> customer = new HashMap<>();
+            Map<String, String> address = new HashMap<>();
 
-        // 🟢 VARIABLE PARA ACUMULAR LAS DESCRIPCIONES PARA EL PDF
-        StringBuilder conceptoConcatenado = new StringBuilder();
+            String rfcLimpio = rfcCliente.trim().toUpperCase();
+            customer.put("tax_id", rfcLimpio);
+            customer.put("legal_name", nombreCliente.trim().toUpperCase());
 
-        for (Object obj : conceptosListaFrontend) {
-            if (obj instanceof Map) {
-                Map<?, ?> cFront = (Map<?, ?>) obj;
-                
-                System.out.println("Concepto recibido del Frontend: " + cFront);
+            if ("EKU9003173C9".equals(rfcLimpio)) {
+                customer.put("tax_system", "601");
+                address.put("zip", "23000");
+            } else if ("XAXX010101000".equals(rfcLimpio) || "XEXX010101000".equals(rfcLimpio)) {
+                customer.put("tax_system", "616");
+                address.put("zip", "06470");
+            } else {
+                customer.put("tax_system", "601");
+                address.put("zip", "06470");
+            }
 
-                Map<String, Object> item = new HashMap<>();
-                Map<String, Object> product = new HashMap<>();
-                
-                // 1. CAPTURAR LA DESCRIPCIÓN EXACTA
-                String descripcion = "";
-                if (cFront.get("descripcion") != null && !cFront.get("descripcion").toString().isBlank()) {
-                    descripcion = cFront.get("descripcion").toString();
-                } else if (cFront.get("concepto") != null && !cFront.get("concepto").toString().isBlank()) {
-                    descripcion = cFront.get("concepto").toString();
-                } else if (cFront.get("descripcionConcepto") != null && !cFront.get("descripcionConcepto").toString().isBlank()) {
-                    descripcion = cFront.get("descripcionConcepto").toString();
-                } else {
-                    for (Object val : cFront.values()) {
-                        if (val instanceof String && !((String) val).isBlank()) {
-                            descripcion = (String) val;
-                            break;
+            customer.put("address", address);
+            facturaMap.put("customer", customer);
+
+            ObjectMapper mapper = new ObjectMapper();
+            List<?> conceptosListaFrontend = mapper.readValue(conceptosJson, List.class);
+            List<Map<String, Object>> itemsList = new ArrayList<>();
+
+            // 🟢 VARIABLE PARA ACUMULAR LAS DESCRIPCIONES PARA EL PDF
+            StringBuilder conceptoConcatenado = new StringBuilder();
+
+            for (Object obj : conceptosListaFrontend) {
+                if (obj instanceof Map) {
+                    Map<?, ?> cFront = (Map<?, ?>) obj;
+
+                    System.out.println("Concepto recibido del Frontend: " + cFront);
+
+                    Map<String, Object> item = new HashMap<>();
+                    Map<String, Object> product = new HashMap<>();
+
+                    // 1. CAPTURAR LA DESCRIPCIÓN EXACTA
+                    String descripcion = "";
+                    if (cFront.get("descripcion") != null && !cFront.get("descripcion").toString().isBlank()) {
+                        descripcion = cFront.get("descripcion").toString();
+                    } else if (cFront.get("concepto") != null && !cFront.get("concepto").toString().isBlank()) {
+                        descripcion = cFront.get("concepto").toString();
+                    } else if (cFront.get("descripcionConcepto") != null
+                            && !cFront.get("descripcionConcepto").toString().isBlank()) {
+                        descripcion = cFront.get("descripcionConcepto").toString();
+                    } else {
+                        for (Object val : cFront.values()) {
+                            if (val instanceof String && !((String) val).isBlank()) {
+                                descripcion = (String) val;
+                                break;
+                            }
                         }
                     }
-                }
 
-                // 🟢 CONCATENAR PARA GUARDAR EN BD
-                if (!descripcion.isBlank()) {
-                    if (conceptoConcatenado.length() > 0) {
-                        conceptoConcatenado.append(", ");
+                    // 🟢 CONCATENAR PARA GUARDAR EN BD
+                    if (!descripcion.isBlank()) {
+                        if (conceptoConcatenado.length() > 0) {
+                            conceptoConcatenado.append(", ");
+                        }
+                        conceptoConcatenado.append(descripcion.trim());
                     }
-                    conceptoConcatenado.append(descripcion.trim());
-                }
 
-                // 2. CAPTURAR EL PRECIO UNITARIO EXACTO
-                double precioUnitario = 0.0;
-                if (cFront.get("precioUnitario") != null) {
-                    precioUnitario = Double.parseDouble(cFront.get("precioUnitario").toString());
-                } else if (cFront.get("valorUnitario") != null) {
-                    precioUnitario = Double.parseDouble(cFront.get("valorUnitario").toString());
-                } else if (cFront.get("precio") != null) {
-                    precioUnitario = Double.parseDouble(cFront.get("precio").toString());
-                }
+                    // 2. CAPTURAR EL PRECIO UNITARIO EXACTO
+                    double precioUnitario = 0.0;
+                    if (cFront.get("precioUnitario") != null) {
+                        precioUnitario = Double.parseDouble(cFront.get("precioUnitario").toString());
+                    } else if (cFront.get("valorUnitario") != null) {
+                        precioUnitario = Double.parseDouble(cFront.get("valorUnitario").toString());
+                    } else if (cFront.get("precio") != null) {
+                        precioUnitario = Double.parseDouble(cFront.get("precio").toString());
+                    }
 
-                // 3. CAPTURAR LA CANTIDAD EXACTA
-                int cantidad = 1;
-                if (cFront.get("cantidad") != null) {
-                    cantidad = Integer.parseInt(cFront.get("cantidad").toString());
-                }
+                    // 3. CAPTURAR LA CANTIDAD EXACTA
+                    int cantidad = 1;
+                    if (cFront.get("cantidad") != null) {
+                        cantidad = Integer.parseInt(cFront.get("cantidad").toString());
+                    }
 
-                // Armar el producto para Facturapi con los datos exactos del usuario
-                product.put("description", descripcion.trim());
-                product.put("price", precioUnitario);
-                product.put("product_key", "01010101"); // Clave del SAT genérica para evitar rechazos
-                product.put("unit_key", "H87");         // Clave de unidad genérica
-                
-                item.put("quantity", cantidad);
-                item.put("product", product);
-                
-                itemsList.add(item);
+                    // Armar el producto para Facturapi con los datos exactos del usuario
+                    product.put("description", descripcion.trim());
+                    product.put("price", precioUnitario);
+                    product.put("product_key", "01010101"); // Clave del SAT genérica para evitar rechazos
+                    product.put("unit_key", "H87"); // Clave de unidad genérica
+
+                    item.put("quantity", cantidad);
+                    item.put("product", product);
+
+                    itemsList.add(item);
+                }
             }
-        }
-    
-        facturaMap.put("items", itemsList);
 
-        String idFacturapi = null;
-        String uuidCfdi = UUID.randomUUID().toString(); 
-        byte[] xmlBytes = null;
-        byte[] pdfBytes = null; 
+            facturaMap.put("items", itemsList);
 
-        try {
-            Invoice respuestaInvoice = facturapiApp.invoices().create(facturaMap, null);
-            idFacturapi = respuestaInvoice.getId();
-            if (respuestaInvoice.getUuid() != null) {
-                uuidCfdi = respuestaInvoice.getUuid();
+            String idFacturapi = null;
+            String uuidCfdi = UUID.randomUUID().toString();
+            byte[] xmlBytes = null;
+            byte[] pdfBytes = null;
+
+            try {
+                Invoice respuestaInvoice = facturapiApp.invoices().create(facturaMap, null);
+                idFacturapi = respuestaInvoice.getId();
+                if (respuestaInvoice.getUuid() != null) {
+                    uuidCfdi = respuestaInvoice.getUuid();
+                }
+                xmlBytes = facturapiApp.invoices().downloadXml(idFacturapi);
+                pdfBytes = facturapiApp.invoices().downloadPdf(idFacturapi);
+            } catch (Exception e) {
+                System.err.println("❌ ERROR AL GENERAR FACTURA EN FACTURAPI:");
+                e.printStackTrace();
             }
-            xmlBytes = facturapiApp.invoices().downloadXml(idFacturapi);
-            pdfBytes = facturapiApp.invoices().downloadPdf(idFacturapi); 
+
+            String nombreXmlNuevo = "manual_" + uuidCfdi + ".xml";
+            String nombrePdfNuevo = "manual_" + uuidCfdi + ".pdf";
+            String rutaDirectorio = BASE_PATH + logueado.getEmpresa().getId() + "/";
+            File dir = new File(rutaDirectorio);
+            if (!dir.exists())
+                dir.mkdirs();
+
+            if (xmlBytes != null) {
+                Files.write(Paths.get(rutaDirectorio + nombreXmlNuevo), xmlBytes);
+            }
+            if (pdfBytes != null) {
+                Files.write(Paths.get(rutaDirectorio + nombrePdfNuevo), pdfBytes);
+            }
+
+            Factura factura = new Factura();
+            factura.setRfcEmisor(logueado.getEmpresa().getRfc());
+            factura.setRfcCliente(rfcLimpio);
+            factura.setSubtotal(subtotal);
+            factura.setIva(iva);
+            factura.setTotal(total);
+            factura.setFecha(LocalDate.now());
+            factura.setTipo(tipo);
+            factura.setNombreArchivo(nombreXmlNuevo);
+            factura.setEstado("TIMBRADA");
+            factura.setEmpresa(logueado.getEmpresa());
+
+            // 🟢 ASIGNAR EL CONCEPTO A LA FACTURA
+            String conceptoFinal = conceptoConcatenado.toString();
+            if (conceptoFinal.isBlank()) {
+                conceptoFinal = "Servicios Profesionales / Facturación General";
+            }
+            factura.setConcepto(conceptoFinal);
+
+            facturaRepository.save(factura);
+
+            String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
+            String detalles = "Creó factura manual (" + tipo + ") Folio: " + uuidCfdi
+                    + " para el Cliente: " + rfcLimpio + " por un Total de $" + String.format("%.2f", total);
+            Auditoria registro = new Auditoria(usuarioActivo, "CREAR FACTURA MANUAL", detalles, logueado.getEmpresa());
+            auditoriaRepository.save(registro);
+
+            return ResponseEntity.ok()
+                    .body("{\"status\":\"success\",\"uuid\":\"" + uuidCfdi + "\",\"id\":" + factura.getId() + "}");
         } catch (Exception e) {
-            System.err.println("❌ ERROR AL GENERAR FACTURA EN FACTURAPI:");
             e.printStackTrace();
+            return ResponseEntity.status(400).body("{\"status\":\"error\",\"message\":\"" + e.getMessage() + "\"}");
         }
-
-        String nombreXmlNuevo = "manual_" + uuidCfdi + ".xml";
-        String nombrePdfNuevo = "manual_" + uuidCfdi + ".pdf";
-        String rutaDirectorio = BASE_PATH + logueado.getEmpresa().getId() + "/";
-        File dir = new File(rutaDirectorio);
-        if (!dir.exists()) dir.mkdirs();
-        
-        if (xmlBytes != null) {
-            Files.write(Paths.get(rutaDirectorio + nombreXmlNuevo), xmlBytes); 
-        }
-        if (pdfBytes != null) {
-            Files.write(Paths.get(rutaDirectorio + nombrePdfNuevo), pdfBytes); 
-        }
-
-        Factura factura = new Factura();
-        factura.setRfcEmisor(logueado.getEmpresa().getRfc());
-        factura.setRfcCliente(rfcLimpio);
-        factura.setSubtotal(subtotal);
-        factura.setIva(iva);
-        factura.setTotal(total);
-        factura.setFecha(LocalDate.now());
-        factura.setTipo(tipo);
-        factura.setNombreArchivo(nombreXmlNuevo); 
-        factura.setEstado("TIMBRADA"); 
-        factura.setEmpresa(logueado.getEmpresa());
-
-        // 🟢 ASIGNAR EL CONCEPTO A LA FACTURA
-        String conceptoFinal = conceptoConcatenado.toString();
-        if (conceptoFinal.isBlank()) {
-            conceptoFinal = "Servicios Profesionales / Facturación General";
-        }
-        factura.setConcepto(conceptoFinal);
-
-        facturaRepository.save(factura);
-
-        String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-        String detalles = "Creó factura manual (" + tipo + ") Folio: " + uuidCfdi 
-                        + " para el Cliente: " + rfcLimpio + " por un Total de $" + String.format("%.2f", total);
-        Auditoria registro = new Auditoria(usuarioActivo, "CREAR FACTURA MANUAL", detalles, logueado.getEmpresa());
-        auditoriaRepository.save(registro);
-
-        return ResponseEntity.ok().body("{\"status\":\"success\",\"uuid\":\"" + uuidCfdi + "\",\"id\":" + factura.getId() + "}");
-    } catch (Exception e) {
-        e.printStackTrace();
-        return ResponseEntity.status(400).body("{\"status\":\"error\",\"message\":\"" + e.getMessage() + "\"}");
     }
-}
 
     @GetMapping("/facturas/obtener/{id}")
     @ResponseBody
@@ -398,7 +420,7 @@ public ResponseEntity<?> guardarFacturaManual(
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             Optional<Factura> facturaOpt = facturaRepository.findById(id);
-            
+
             if (facturaOpt.isPresent()) {
                 Factura f = facturaOpt.get();
                 if (f.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
@@ -433,38 +455,45 @@ public ResponseEntity<?> guardarFacturaManual(
                     facturaRepository.save(f);
 
                     String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-                    String detalles = "Modificó datos de la factura ID: " + id 
-                                    + ". Nuevo Cliente: " + rfcCliente.trim() + ", Nuevo Total: $" + String.format("%.2f", total);
-                    Auditoria registro = new Auditoria(usuarioActivo, "MODIFICAR FACTURA", detalles, logueado.getEmpresa());
+                    String detalles = "Modificó datos de la factura ID: " + id
+                            + ". Nuevo Cliente: " + rfcCliente.trim() + ", Nuevo Total: $"
+                            + String.format("%.2f", total);
+                    Auditoria registro = new Auditoria(usuarioActivo, "MODIFICAR FACTURA", detalles,
+                            logueado.getEmpresa());
                     auditoriaRepository.save(registro);
                 }
             });
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return "redirect:/facturas/historial";
     }
 
     // =========================================================================
     // 2. HISTORIAL UNIFICADO DE FACTURAS (MANUALES Y XML) - CORREGIDO
     // =========================================================================
-@GetMapping("/facturas/historial")
+    @GetMapping("/facturas/historial")
     public String historialFacturas(Principal principal, Model model) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
-            
+
             // Obtener todas las facturas de la empresa
             List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
-            if (todas == null) todas = new ArrayList<>();
-            
-            // FILTRO: Guardar en la lista solo las facturas creadas manualmente desde la app
+            if (todas == null)
+                todas = new ArrayList<>();
+
+            // FILTRO: Guardar en la lista solo las facturas creadas manualmente desde la
+            // app
             List<Factura> soloManuales = todas.stream()
-                    .filter(f -> f.getNombreArchivo() == null || f.getNombreArchivo().trim().toLowerCase().startsWith("manual_"))
+                    .filter(f -> f.getNombreArchivo() == null
+                            || f.getNombreArchivo().trim().toLowerCase().startsWith("manual_"))
                     .collect(Collectors.toList());
-            
+
             model.addAttribute("usuarioLogueado", logueado);
             model.addAttribute("facturas", soloManuales); // Pasamos solo las manuales a la plantilla
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("facturas", new ArrayList<>());
@@ -474,27 +503,29 @@ public ResponseEntity<?> guardarFacturaManual(
     }
 
     @PostMapping("/clientes/crear")
-    public String crearCliente(Principal principal, 
-                               @RequestParam String nombre, 
-                               @RequestParam String rfc) {
+    public String crearCliente(Principal principal,
+            @RequestParam String nombre,
+            @RequestParam String rfc) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
-            
+
             Cliente nuevoCliente = new Cliente();
             nuevoCliente.setNombre(nombre.trim().toUpperCase());
             nuevoCliente.setRfc(rfc.trim().toUpperCase());
             nuevoCliente.setEmpresa(logueado.getEmpresa());
-            
+
             clienteRepository.save(nuevoCliente);
 
             String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-            String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre() 
-                            + " con RFC: " + nuevoCliente.getRfc();
-                                                                                                                        
+            String detalles = "Agregó un nuevo cliente al sistema: " + nuevoCliente.getNombre()
+                    + " con RFC: " + nuevoCliente.getRfc();
+
             Auditoria registro = new Auditoria(usuarioActivo, "CREAR CLIENTE", detalles, logueado.getEmpresa());
             auditoriaRepository.save(registro);
 
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return "redirect:/clientes";
     }
 
@@ -503,10 +534,12 @@ public ResponseEntity<?> guardarFacturaManual(
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             model.addAttribute("usuarios", usuarioRepository.findByEmpresaId(logueado.getEmpresa().getId()));
-            model.addAttribute("usuarioLogueado", logueado); 
+            model.addAttribute("usuarioLogueado", logueado);
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            
-        } catch (Exception e) { model.addAttribute("usuarios", new ArrayList<>()); }
+
+        } catch (Exception e) {
+            model.addAttribute("usuarios", new ArrayList<>());
+        }
         return "usuarios";
     }
 
@@ -516,11 +549,13 @@ public ResponseEntity<?> guardarFacturaManual(
             Usuario logueado = getUsuarioLogueado(principal);
             if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
                 usuarioRepository.findById(id).ifPresent(u -> {
-                    if ("JEFE".equalsIgnoreCase(u.getRol())) return;
+                    if ("JEFE".equalsIgnoreCase(u.getRol()))
+                        return;
                     if (u.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
-                        
+
                         String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-                        String detalles = "Eliminó al Trabajador/Usuario: '" + u.getUsername() + "' (Rol: " + u.getRol() + ") con ID: " + id;
+                        String detalles = "Eliminó al Trabajador/Usuario: '" + u.getUsername() + "' (Rol: " + u.getRol()
+                                + ") con ID: " + id;
                         Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles, logueado.getEmpresa());
                         auditoriaRepository.save(registro);
 
@@ -528,7 +563,9 @@ public ResponseEntity<?> guardarFacturaManual(
                     }
                 });
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return "redirect:/usuarios";
     }
 
@@ -538,15 +575,20 @@ public ResponseEntity<?> guardarFacturaManual(
             Usuario logueado = getUsuarioLogueado(principal);
             if ("JEFE".equalsIgnoreCase(logueado.getRol())) {
                 usuarioRepository.findById(id).ifPresent(u -> {
-                    if ("JEFE".equalsIgnoreCase(u.getRol())) return;
+                    if ("JEFE".equalsIgnoreCase(u.getRol()))
+                        return;
                     if (u.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
-                        if ("subir".equalsIgnoreCase(accion)) u.setRol("GERENTE");
-                        else if ("bajar".equalsIgnoreCase(accion)) u.setRol("TRABAJADOR");
+                        if ("subir".equalsIgnoreCase(accion))
+                            u.setRol("GERENTE");
+                        else if ("bajar".equalsIgnoreCase(accion))
+                            u.setRol("TRABAJADOR");
                         usuarioRepository.save(u);
                     }
                 });
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return "redirect:/usuarios";
     }
 
@@ -556,8 +598,10 @@ public ResponseEntity<?> guardarFacturaManual(
             Usuario logueado = getUsuarioLogueado(principal);
             model.addAttribute("usuario", logueado);
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            
-        } catch (Exception e) { return "redirect:/"; }
+
+        } catch (Exception e) {
+            return "redirect:/";
+        }
         return "perfil";
     }
 
@@ -572,7 +616,9 @@ public ResponseEntity<?> guardarFacturaManual(
             }
             usuarioRepository.save(logueado);
             return "redirect:/perfil?fotoExito";
-        } catch (Exception e) { return "redirect:/perfil?error"; }
+        } catch (Exception e) {
+            return "redirect:/perfil?error";
+        }
     }
 
     @PostMapping("/perfil/actualizar-clave")
@@ -582,7 +628,9 @@ public ResponseEntity<?> guardarFacturaManual(
             logueado.setPassword(passwordEncoder.encode(nuevaClave.trim()));
             usuarioRepository.save(logueado);
             return "redirect:/perfil?exito";
-        } catch (Exception e) { return "redirect:/perfil?error"; }
+        } catch (Exception e) {
+            return "redirect:/perfil?error";
+        }
     }
 
     @PostMapping("/subir")
@@ -591,24 +639,24 @@ public ResponseEntity<?> guardarFacturaManual(
         Usuario logueado = getUsuarioLogueado(principal);
         String ruta = BASE_PATH + logueado.getEmpresa().getId() + "/";
         new File(ruta).mkdirs();
-        
+
         for (MultipartFile archivo : archivos) {
             if (archivo.isEmpty()) {
                 System.out.println("⚠️ Archivo vacío recibido, saltando...");
                 continue;
             }
-            
+
             System.out.println("Processing archivo: " + archivo.getOriginalFilename());
-            
+
             try {
                 // 1. LEER EL XML DESDE EL INPUT STREAM EN MEMORIA
                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                 factory.setNamespaceAware(true);
                 org.w3c.dom.Document doc = factory.newDocumentBuilder().parse(archivo.getInputStream());
-                
+
                 Factura f = new Factura();
                 org.w3c.dom.Element comp = (org.w3c.dom.Element) doc.getElementsByTagNameNS("*", "Comprobante").item(0);
-                
+
                 if (comp != null) {
                     // --- PARSEO SEGURO DE TOTAL ---
                     try {
@@ -633,13 +681,13 @@ public ResponseEntity<?> guardarFacturaManual(
                         System.out.println("❌ Error parseando Fecha, usando fecha actual.");
                         f.setFecha(LocalDate.now());
                     }
-                    
+
                     // --- DETECTAR TIPO DE COMPROBANTE ---
                     String tipoComprobante = comp.getAttribute("TipoDeComprobante");
                     System.out.println(" Atributo TipoDeComprobante original: " + tipoComprobante);
                     f.setTipo("E".equalsIgnoreCase(tipoComprobante) ? "EGRESO" : "INGRESO");
                     System.out.println(" Tipo asignado al objeto Factura: " + f.getTipo());
-                    
+
                     // --- PARSEO SEGURO DE SUBTOTAL ---
                     double subtotal = f.getTotal();
                     try {
@@ -651,7 +699,7 @@ public ResponseEntity<?> guardarFacturaManual(
                         System.out.println("❌ Error parseando SubTotal, usando valor del Total.");
                     }
                     f.setSubtotal(subtotal);
-                    
+
                     // --- EXTRAER O CALCULAR IVA ---
                     org.w3c.dom.NodeList impuestosNode = doc.getElementsByTagNameNS("*", "Impuestos");
                     double totalIva = 0.0;
@@ -671,7 +719,7 @@ public ResponseEntity<?> guardarFacturaManual(
                         totalIva = f.getTotal() - subtotal;
                     }
                     f.setIva(totalIva);
-                    
+
                     // --- ASIGNACIÓN DE RFC CLIENTE O PROVEEDOR ---
                     if ("EGRESO".equals(f.getTipo())) {
                         org.w3c.dom.NodeList emisor = doc.getElementsByTagNameNS("*", "Emisor");
@@ -694,15 +742,15 @@ public ResponseEntity<?> guardarFacturaManual(
                             f.setRfcCliente(cliente);
                         }
                     }
-                    
+
                     f.setNombreArchivo(archivo.getOriginalFilename());
                     f.setEmpresa(logueado.getEmpresa());
-                    
+
                     // 2. TRANSFERIR ARCHIVO FÍSICO A DISCO
                     File destino = new File(ruta + archivo.getOriginalFilename());
                     archivo.transferTo(destino);
                     System.out.println(" Archivo guardado físicamente en: " + destino.getAbsolutePath());
-                    
+
                     // 3. GUARDAR EN REPOSITORIO DE DATOS
                     System.out.println(" Guardando objeto Factura en SQL Server...");
                     facturaRepository.save(f);
@@ -710,18 +758,19 @@ public ResponseEntity<?> guardarFacturaManual(
 
                     // 4. REGISTRO EN BITÁCORA
                     String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-                    String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename() 
-                                    + "' vinculando una factura de tipo " + f.getTipo() + " por $" + String.format("%.2f", f.getTotal());
+                    String detalles = "Cargó archivo XML al servidor: '" + archivo.getOriginalFilename()
+                            + "' vinculando una factura de tipo " + f.getTipo() + " por $"
+                            + String.format("%.2f", f.getTotal());
                     Auditoria registro = new Auditoria(usuarioActivo, "CARGAR XML", detalles, logueado.getEmpresa());
                     auditoriaRepository.save(registro);
                     System.out.println(" Bitácora de auditoría registrada.");
                 } else {
                     System.out.println("❌ No se encontró el nodo principal <cfdi:Comprobante> en el XML.");
                 }
-                
-            } catch (Exception e) { 
+
+            } catch (Exception e) {
                 System.out.println("❌ ERROR CRÍTICO PROCESANDO EL ARCHIVO XML CONTROLLER:");
-                e.printStackTrace(); 
+                e.printStackTrace();
             }
         }
         System.out.println("====== FIN DEL PROCESAMIENTO, REDIRIGIENDO AL HOME ======");
@@ -734,8 +783,9 @@ public ResponseEntity<?> guardarFacturaManual(
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             String rutaCarpeta = BASE_PATH + logueado.getEmpresa().getId() + "/";
-            
-            String nombreArchivo = identificador.contains("-") ? "manual_" + identificador + ".xml" : "factura_" + identificador + ".xml";
+
+            String nombreArchivo = identificador.contains("-") ? "manual_" + identificador + ".xml"
+                    : "factura_" + identificador + ".xml";
 
             if (identificador.matches("^\\d+$")) {
                 Optional<Factura> fOpt = facturaRepository.findById(Long.parseLong(identificador));
@@ -745,7 +795,9 @@ public ResponseEntity<?> guardarFacturaManual(
             }
 
             File carpeta = new File(rutaCarpeta);
-            if (!carpeta.exists()) { carpeta.mkdirs(); }
+            if (!carpeta.exists()) {
+                carpeta.mkdirs();
+            }
 
             Path path = Paths.get(rutaCarpeta + nombreArchivo);
 
@@ -759,7 +811,9 @@ public ResponseEntity<?> guardarFacturaManual(
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
                     .body(resource);
-        } catch (Exception e) { return ResponseEntity.status(500).build(); }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     // =========================================================================
@@ -903,40 +957,65 @@ public ResponseEntity<?> guardarFacturaManual(
                 document.add(receptorDatos);
                 document.add(new Paragraph(" \n"));
 
-                // --- 3. TABLA DETALLE DE CONCEPTOS / SERVICIOS (DINÁMICO) ---
-                PdfPTable conceptosBarra = new PdfPTable(1);
-                conceptosBarra.setWidthPercentage(100);
-                PdfPCell celdaBarra2 = new PdfPCell(new Phrase("DETALLE DE CONCEPTOS Y SERVICIOS", fontSeccion));
-                celdaBarra2.setBackgroundColor(new Color(40, 70, 120));
-                celdaBarra2.setPadding(4);
-                celdaBarra2.setBorder(PdfPCell.NO_BORDER);
-                conceptosBarra.addCell(celdaBarra2);
-                document.add(conceptosBarra);
+ // --- 3. TABLA DETALLE DE CONCEPTOS / SERVICIOS (DINÁMICO) ---
+            PdfPTable conceptosBarra = new PdfPTable(1);
+            conceptosBarra.setWidthPercentage(100);
+            PdfPCell celdaBarra2 = new PdfPCell(new Phrase("DETALLE DE CONCEPTOS Y SERVICIOS", fontSeccion));
+            celdaBarra2.setBackgroundColor(new Color(40, 70, 120));
+            celdaBarra2.setPadding(4);
+            celdaBarra2.setBorder(PdfPCell.NO_BORDER);
+            conceptosBarra.addCell(celdaBarra2);
+            document.add(conceptosBarra);
 
-                PdfPTable tablaConceptos = new PdfPTable(4);
-                tablaConceptos.setWidthPercentage(100);
-                tablaConceptos.setWidths(new int[]{12, 58, 15, 15});
+            PdfPTable tablaConceptos = new PdfPTable(4);
+            tablaConceptos.setWidthPercentage(100);
+            tablaConceptos.setWidths(new int[]{12, 58, 15, 15});
 
-                String[] encabezados = {"Cant.", "Descripción / Servicio", "P. Unitario", "Importe"};
-                for (String enc : encabezados) {
-                    PdfPCell hCell = new PdfPCell(new Phrase(enc, fontHeaderTabla));
-                    hCell.setBackgroundColor(new Color(70, 90, 130));
-                    hCell.setPadding(5);
-                    hCell.setHorizontalAlignment(enc.contains("P.") || enc.equals("Importe") ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT);
-                    tablaConceptos.addCell(hCell);
+            String[] encabezados = {"Cant.", "Descripción / Servicio", "P. Unitario", "Importe"};
+            for (String enc : encabezados) {
+                PdfPCell hCell = new PdfPCell(new Phrase(enc, fontHeaderTabla));
+                hCell.setBackgroundColor(new Color(70, 90, 130));
+                hCell.setPadding(5);
+                hCell.setHorizontalAlignment(enc.contains("P.") || enc.equals("Importe") ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT);
+                tablaConceptos.addCell(hCell);
+            }
+
+            // 🟢 RENGLONES DINÁMICOS EN EL PDF
+            if (descripcionConceptos != null && !descripcionConceptos.trim().isEmpty()) {
+                String[] items = descripcionConceptos.split(",");
+                double subtotalPorItem = (items.length > 0) ? (subtotal / items.length) : subtotal;
+
+                for (String item : items) {
+                    String conceptoLimpio = item.trim();
+                    if (conceptoLimpio.isEmpty()) continue;
+
+                    PdfPCell cCant = new PdfPCell(new Phrase("1", fontContenido));
+                    cCant.setPadding(5);
+                    tablaConceptos.addCell(cCant);
+
+                    PdfPCell cDesc = new PdfPCell(new Phrase(conceptoLimpio, fontContenido));
+                    cDesc.setPadding(5);
+                    tablaConceptos.addCell(cDesc);
+
+                    PdfPCell cPU = new PdfPCell(new Phrase(String.format("$%.2f", subtotalPorItem), fontContenido));
+                    cPU.setPadding(5);
+                    cPU.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                    tablaConceptos.addCell(cPU);
+
+                    PdfPCell cImp = new PdfPCell(new Phrase(String.format("$%.2f", subtotalPorItem), fontContenido));
+                    cImp.setPadding(5);
+                    cImp.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                    tablaConceptos.addCell(cImp);
                 }
-
-                // Cantidad
+            } else {
                 PdfPCell cCant = new PdfPCell(new Phrase("1", fontContenido));
                 cCant.setPadding(5);
                 tablaConceptos.addCell(cCant);
 
-                // ✅ DESCRIPCIÓN DINÁMICA
-                PdfPCell cDesc = new PdfPCell(new Phrase(descripcionConceptos, fontContenido));
+                PdfPCell cDesc = new PdfPCell(new Phrase("Servicios Profesionales / Facturación General", fontContenido));
                 cDesc.setPadding(5);
                 tablaConceptos.addCell(cDesc);
 
-                // Precio Unitario e Importe
                 PdfPCell cPU = new PdfPCell(new Phrase(String.format("$%.2f", subtotal), fontContenido));
                 cPU.setPadding(5);
                 cPU.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -946,61 +1025,66 @@ public ResponseEntity<?> guardarFacturaManual(
                 cImp.setPadding(5);
                 cImp.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 tablaConceptos.addCell(cImp);
-
-                document.add(tablaConceptos);
-                document.add(new Paragraph(" \n"));
-
-                // --- 4. RESUMEN FINANCIERO Y TOTALES ---
-                PdfPTable tablaFinanciera = new PdfPTable(2);
-                tablaFinanciera.setWidthPercentage(100);
-                tablaFinanciera.setWidths(new int[]{70, 30});
-
-                PdfPCell cSubLabel = new PdfPCell(new Phrase("Subtotal Base (Moneda Nacional)", fontContenido));
-                cSubLabel.setPadding(5);
-                cSubLabel.setBorderColor(new Color(220, 220, 220));
-                PdfPCell cSubVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", subtotal), fontContenido));
-                cSubVal.setPadding(5);
-                cSubVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                cSubVal.setBorderColor(new Color(220, 220, 220));
-                tablaFinanciera.addCell(cSubLabel);
-                tablaFinanciera.addCell(cSubVal);
-
-                PdfPCell cIvaLabel = new PdfPCell(new Phrase("Impuesto Trasladado (IVA 16%)", fontContenido));
-                cIvaLabel.setPadding(5);
-                cIvaLabel.setBorderColor(new Color(220, 220, 220));
-                PdfPCell cIvaVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", iva), fontContenido));
-                cIvaVal.setPadding(5);
-                cIvaVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                cIvaVal.setBorderColor(new Color(220, 220, 220));
-                tablaFinanciera.addCell(cIvaLabel);
-                tablaFinanciera.addCell(cIvaVal);
-
-                PdfPCell cTotLabel = new PdfPCell(new Phrase("TOTAL NETO A PAGAR", fontContenidoBold));
-                cTotLabel.setPadding(7);
-                cTotLabel.setBackgroundColor(new Color(245, 245, 245));
-                cTotLabel.setBorderColor(new Color(180, 180, 180));
-                PdfPCell cTotVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", total), fontContenidoBold));
-                cTotVal.setPadding(7);
-                cTotVal.setBackgroundColor(new Color(245, 245, 245));
-                cTotVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                cTotVal.setBorderColor(new Color(180, 180, 180));
-                tablaFinanciera.addCell(cTotLabel);
-                tablaFinanciera.addCell(cTotVal);
-
-                document.add(tablaFinanciera);
-                document.close();
             }
 
-            Resource resource = new FileSystemResource(path.toFile());
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + nombreArchivo + "\"")
-                    .body(resource);
+            document.add(tablaConceptos);
+            document.add(new Paragraph(" \n"));
+
+            // --- 4. RESUMEN FINANCIERO Y TOTALES ---
+            PdfPTable tablaFinanciera = new PdfPTable(2);
+            tablaFinanciera.setWidthPercentage(100);
+            tablaFinanciera.setWidths(new int[]{70, 30});
+
+            PdfPCell cSubLabel = new PdfPCell(new Phrase("Subtotal Base (Moneda Nacional)", fontContenido));
+            cSubLabel.setPadding(5);
+            cSubLabel.setBorderColor(new Color(220, 220, 220));
+            PdfPCell cSubVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", subtotal), fontContenido));
+            cSubVal.setPadding(5);
+            cSubVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            cSubVal.setBorderColor(new Color(220, 220, 220));
+            tablaFinanciera.addCell(cSubLabel);
+            tablaFinanciera.addCell(cSubVal);
+
+            PdfPCell cIvaLabel = new PdfPCell(new Phrase("Impuesto Trasladado (IVA 16%)", fontContenido));
+            cIvaLabel.setPadding(5);
+            cIvaLabel.setBorderColor(new Color(220, 220, 220));
+            PdfPCell cIvaVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", iva), fontContenido));
+            cIvaVal.setPadding(5);
+            cIvaVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            cIvaVal.setBorderColor(new Color(220, 220, 220));
+            tablaFinanciera.addCell(cIvaLabel);
+            tablaFinanciera.addCell(cIvaVal);
+
+            PdfPCell cTotLabel = new PdfPCell(new Phrase("TOTAL NETO A PAGAR", fontContenidoBold));
+            cTotLabel.setPadding(7);
+            cTotLabel.setBackgroundColor(new Color(245, 245, 245));
+            cTotLabel.setBorderColor(new Color(180, 180, 180));
+            PdfPCell cTotVal = new PdfPCell(new Phrase(String.format("$%.2f MXN", total), fontContenidoBold));
+            cTotVal.setPadding(7);
+            cTotVal.setBackgroundColor(new Color(245, 245, 245));
+            cTotVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            cTotVal.setBorderColor(new Color(180, 180, 180));
+            tablaFinanciera.addCell(cTotLabel);
+            tablaFinanciera.addCell(cTotVal);
+
+            document.add(tablaFinanciera);
+            document.close();
+
+           Resource resource = new FileSystemResource(path.toFile());
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_PDF)
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + nombreArchivo + "\"")
+                        .body(resource);
+
+            } // <-- Cierre del try-with-resources (FileOutputStream)
+
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.internalServerError().build();
         }
     }
+
+
     // =========================================================================
     // 4. ELIMINACIÓN DE REGISTROS FISCALES
     // =========================================================================
@@ -1008,22 +1092,22 @@ public ResponseEntity<?> guardarFacturaManual(
     public String borrarFactura(Principal principal, @PathVariable Long id) {
         try {
             Usuario logueado = getUsuarioLogueado(principal);
-            
+
             facturaRepository.findById(id).ifPresent(f -> {
                 if (f.getEmpresa().getId().equals(logueado.getEmpresa().getId())) {
-                    
+
                     String usuarioActivo = (principal != null) ? principal.getName() : "Sistema";
-                    String detalles = "Eliminó del sistema la factura tipo: " + f.getTipo() 
-                                    + " | Cliente: " + f.getRfcCliente() 
-                                    + " | Monto: $" + String.format("%.2f", f.getTotal());
-                    
+                    String detalles = "Eliminó del sistema la factura tipo: " + f.getTipo()
+                            + " | Cliente: " + f.getRfcCliente()
+                            + " | Monto: $" + String.format("%.2f", f.getTotal());
+
                     Auditoria registro = new Auditoria(usuarioActivo, "ELIMINAR", detalles, logueado.getEmpresa());
                     auditoriaRepository.save(registro);
 
                     if (f.getNombreArchivo() != null && !f.getNombreArchivo().isEmpty()) {
                         String idEmpresaCarpeta = String.valueOf(logueado.getEmpresa().getId());
                         Path xmlPath = Paths.get(BASE_PATH, idEmpresaCarpeta, f.getNombreArchivo());
-                        
+
                         String nombrePdf = f.getNombreArchivo().replace(".xml", ".pdf");
                         Path pdfPath = Paths.get(BASE_PATH, idEmpresaCarpeta, nombrePdf);
 
@@ -1037,8 +1121,10 @@ public ResponseEntity<?> guardarFacturaManual(
                     facturaRepository.deleteById(id);
                 }
             });
-        } catch (Exception e) { e.printStackTrace(); }
-        return "redirect:/facturas/historial"; 
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "redirect:/facturas/historial";
     }
 
     // =========================================================================
@@ -1049,32 +1135,33 @@ public ResponseEntity<?> guardarFacturaManual(
         try {
             Usuario logueado = getUsuarioLogueado(principal);
             Long idEmpresa = logueado.getEmpresa().getId();
-            
+
             List<Factura> todas = facturaRepository.findByEmpresaId(idEmpresa);
-            if (todas == null) todas = new ArrayList<>();
-            
+            if (todas == null)
+                todas = new ArrayList<>();
+
             List<Factura> comprobantesXml = todas.stream()
                     .filter(f -> f.getNombreArchivo() != null && !f.getNombreArchivo().startsWith("manual_"))
                     .collect(Collectors.toList());
-            
+
             double ingresosSubtotal = comprobantesXml.stream()
                     .filter(f -> "INGRESO".equalsIgnoreCase(f.getTipo()))
                     .mapToDouble(f -> f.getSubtotal() != null ? f.getSubtotal() : 0.0).sum();
-                    
+
             double ingresosIva = comprobantesXml.stream()
                     .filter(f -> "INGRESO".equalsIgnoreCase(f.getTipo()))
                     .mapToDouble(f -> f.getIva() != null ? f.getIva() : 0.0).sum();
-            
+
             double egresosSubtotal = comprobantesXml.stream()
                     .filter(f -> "EGRESO".equalsIgnoreCase(f.getTipo()))
                     .mapToDouble(f -> f.getSubtotal() != null ? f.getSubtotal() : 0.0).sum();
-                    
+
             double egresosIva = comprobantesXml.stream()
                     .filter(f -> "EGRESO".equalsIgnoreCase(f.getTipo()))
                     .mapToDouble(f -> f.getIva() != null ? f.getIva() : 0.0).sum();
-            
+
             double balanceIva = ingresosIva - egresosIva;
-            
+
             model.addAttribute("usuarioLogueado", logueado);
             model.addAttribute("ingresosSubtotal", ingresosSubtotal);
             model.addAttribute("ivaTrasladado", ingresosIva);
@@ -1082,7 +1169,7 @@ public ResponseEntity<?> guardarFacturaManual(
             model.addAttribute("ivaAcreditable", egresosIva);
             model.addAttribute("balanceIva", balanceIva);
             model.addAttribute("empresaNombre", logueado.getEmpresa().getRazonSocial());
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("balanceIva", 0.0);
@@ -1090,4 +1177,4 @@ public ResponseEntity<?> guardarFacturaManual(
         }
         return "impuestos";
     }
-}
+} // 👈 Esta última llave cierra la Clase Controller
