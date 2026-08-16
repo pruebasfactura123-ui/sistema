@@ -236,55 +236,46 @@
                 <i class="fas fa-shield-alt me-1"></i> No tienes permisos para eliminar comprobantes fiscales.
             </div>
 
-            <!-- Widget de Asistencia (Visible si NO es Jefe) -->
-            <div sec:authorize="!hasRole('JEFE')" class="card-custom mb-4" style="padding: 15px 20px;">
-                <div class="row align-items-center">
-                    <div class="col-md-4 d-flex align-items-center gap-3 border-end">
-                        <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-clock"></i></div>
-                        <div>
-                            <small class="text-uppercase fw-bold text-muted" style="font-size: 0.55rem; letter-spacing: 0.5px;">Hora Servidor</small>
-                            <div class="fw-bold text-dark" id="txtReloj" style="font-size: 1.4rem; letter-spacing: 1px;">00:00:00</div>
-                        </div>
-                    </div>
-                    <div class="col-md-8 d-flex justify-content-start align-items-center gap-3 ps-4">
-                        <span class="fw-bold text-secondary" style="font-size: 0.7rem;">REGISTRO DE JORNADA:</span>
-                        
-                        <form th:action="@{/asistencia/entrada}" method="post" class="d-inline">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
-                            <button type="submit" class="btn btn-success btn-sm px-4 fw-bold rounded-pill" style="font-size: 0.65rem; background-color: var(--verde-ingreso); border:none;">
-                                <i class="fas fa-sign-in-alt me-1"></i> Marcar Entrada
-                            </button>
-                        </form>
+           <!-- Widget Asistencia Compacto para Sidebar (Visible si NO es Jefe) -->
+<div sec:authorize="!hasRole('JEFE')" class="px-3 py-2 mb-3 mx-2 rounded bg-dark bg-opacity-50 border border-secondary text-white">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="fas fa-clock text-primary fs-6"></i>
+        <div>
+            <div style="font-size: 0.55rem;" class="text-uppercase text-muted fw-bold">Hora Servidor</div>
+            <div id="txtRelojSidebar" class="fw-bold text-light" style="font-size: 0.9rem; letter-spacing: 1px;">00:00:00</div>
+        </div>
+    </div>
 
-                        <form th:action="@{/asistencia/salida}" method="post" class="d-inline">
-                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
-                            <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold rounded-pill" style="font-size: 0.65rem; background-color: var(--rojo-egreso); border:none;">
-                                <i class="fas fa-sign-out-alt me-1"></i> Marcar Salida
-                            </button>
-                        </form>
-                    </div>
-                </div>
+    <div class="d-flex gap-2">
+        <form th:action="@{/asistencia/entrada}" method="post" class="w-50">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
+            <button type="submit" class="btn btn-success btn-sm w-100 py-1 px-1 fw-bold" style="font-size: 0.6rem; background-color: var(--verde-ingreso); border:none;" title="Marcar Entrada">
+                <i class="fas fa-sign-in-alt me-1"></i>Entrada
+            </button>
+        </form>
 
-                <div class="row mt-3" th:if="${exitoAsistencia} or ${alertaAsistencia}">
-                    <div class="col-12">
-                        <div th:if="${exitoAsistencia}" class="alert alert-success alert-dismissible fade show py-2 m-0 border-0 shadow-sm d-flex align-items-center justify-content-between gap-2" role="alert" style="font-size: 0.65rem; border-radius: 8px;">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-check-circle text-success fs-6"></i> 
-                                <span class="fw-semibold" th:text="${exitoAsistencia}"></span>
-                            </div>
-                            <button type="button" class="btn-close p-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem; top: 6px;"></button>
-                        </div>
-                        
-                        <div th:if="${alertaAsistencia}" class="alert alert-warning alert-dismissible fade show py-2 m-0 border-0 shadow-sm d-flex align-items-center justify-content-between gap-2" role="alert" style="font-size: 0.65rem; border-radius: 8px;">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-exclamation-triangle text-warning fs-6"></i> 
-                                <span class="fw-semibold" th:text="${alertaAsistencia}"></span>
-                            </div>
-                            <button type="button" class="btn-close p-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.5rem; top: 6px;"></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <form th:action="@{/asistencia/salida}" method="post" class="w-50">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
+            <button type="submit" class="btn btn-danger btn-sm w-100 py-1 px-1 fw-bold" style="font-size: 0.6rem; background-color: var(--rojo-egreso); border:none;" title="Marcar Salida">
+                <i class="fas fa-sign-out-alt me-1"></i>Salida
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function() {
+        function actualizarReloj() {
+            const reloj = document.getElementById('txtRelojSidebar');
+            if (reloj) {
+                const ahora = new Date();
+                reloj.innerText = ahora.toLocaleTimeString('es-MX', { hour12: false });
+            }
+        }
+        actualizarReloj();
+        setInterval(actualizarReloj, 1000);
+    })();
+</script>
 
             <!-- TARJETAS DE ESTADÍSTICAS -->
             <div class="row g-3 mb-4">
