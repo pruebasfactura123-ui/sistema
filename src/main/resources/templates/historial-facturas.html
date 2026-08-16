@@ -162,16 +162,16 @@
                 </li>
                 
                 <li class="sidebar-header">Administración</li>
-                <li class="sidebar-item">
+                <li class="sidebar-item" sec:authorize="hasAnyRole('GERENTE', 'JEFE', 'ROLE_GERENTE', 'ROLE_JEFE')">
                     <a th:href="@{/usuarios}"><i class="fas fa-users"></i> Trabajadores</a>
                 </li>
-                <li class="sidebar-item">
+                <li class="sidebar-item" sec:authorize="hasAnyRole('TRABAJADOR', 'GERENTE', 'JEFE', 'ROLE_TRABAJADOR', 'ROLE_GERENTE', 'ROLE_JEFE')">
                     <a th:href="@{/clientes}"><i class="fas fa-handshake"></i> Clientes</a>
                 </li>
-                <li class="sidebar-item">
+                <li class="sidebar-item" sec:authorize="hasAnyRole('GERENTE', 'JEFE', 'ROLE_GERENTE', 'ROLE_JEFE')">
                     <a th:href="@{/empresa}"><i class="fas fa-building"></i> Mi Empresa</a>
                 </li>
-                <li class="sidebar-item">
+                <li class="sidebar-item" sec:authorize="hasAnyRole('GERENTE', 'JEFE', 'ROLE_GERENTE', 'ROLE_JEFE')">
                     <a th:href="@{/operaciones/auditoria}"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
                 </li>
             </ul>
@@ -237,7 +237,6 @@
                             <tr th:each="f : ${facturas}">
                                 <td class="text-muted fw-semibold" th:text="${f.fecha != null ? #temporals.format(f.fecha, 'dd/MM/yyyy') : '---'}">2026-05-14</td>
                                 
-                                <!-- CORREGIDO: Se reemplaza f.nombreCliente por f.rfcCliente -->
                                 <td class="fw-bold text-secondary col-filtrar" th:text="${f.rfcCliente != null ? f.rfcCliente : 'Sin RFC'}">USUARIO PRUEBA ESTADIA</td>
                                 
                                 <td>
