@@ -146,23 +146,26 @@
                 <li class="sidebar-item">
                     <a th:href="@{/operaciones/declaraciones}"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
                 </li>
-                <li class="sidebar-item">
+                <li class="sidebar-item" sec:authorize="hasAnyRole('JEFE', 'GERENTE') or hasAnyAuthority('JEFE', 'GERENTE')">
                     <a th:href="@{/operaciones/nominas}"><i class="fas fa-file-invoice-dollar"></i> Nóminas / Sueldos</a>
                 </li>
                 
                 <li class="sidebar-header">Administración</li>
-                <li class="sidebar-item">
-                    <a th:href="@{/usuarios}"><i class="fas fa-users"></i> Trabajadores</a>
-                </li>
                 <li class="sidebar-item active">
                     <a th:href="@{/clientes}"><i class="fas fa-handshake"></i> Clientes</a>
                 </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/empresa}"><i class="fas fa-building"></i> Mi Empresa</a>
-                </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/operaciones/auditoria}"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
-                </li>
+                
+                <th:block sec:authorize="hasAnyRole('JEFE', 'GERENTE') or hasAnyAuthority('JEFE', 'GERENTE')">
+                    <li class="sidebar-item">
+                        <a th:href="@{/usuarios}"><i class="fas fa-users"></i> Trabajadores</a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a th:href="@{/empresa}"><i class="fas fa-building"></i> Mi Empresa</a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a th:href="@{/operaciones/auditoria}"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
+                    </li>
+                </th:block>
             </ul>
             
             <div class="sidebar-footer">
@@ -177,7 +180,7 @@
                 </a>
                 <div class="sidebar-item">
                     <form th:action="@{/logout}" method="post" class="m-0">
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
+                        <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                         <button type="submit" class="btn-logout sidebar-item"><i class="fas fa-sign-out-alt me-2" style="width: 20px;"></i>Cerrar Sesión</button>
                     </form>
                 </div>
@@ -226,7 +229,6 @@
                     <div class="card-custom">
                         <h6 class="fw-bold mb-3 text-navy" style="color: var(--navy);"><i class="fas fa-user-plus me-2 text-muted"></i>Nuevo Cliente</h6>
                         
-                        <!-- FORMAR A RUTA CORRECTA /clientes/guardar Y PREVENIR DOBLE SUBMIT -->
                         <form th:action="@{/clientes/guardar}" method="post" onsubmit="let btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = '<i class=\'fas fa-spinner fa-spin me-1\'></i>Guardando...';">
                             <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             
@@ -263,7 +265,7 @@
                                         <th>RFC</th>
                                         <th>Teléfono</th>
                                         <th>Correo</th>
-                                        <th sec:authorize="hasAnyRole('JEFE', 'GERENTE')" class="text-end" style="width: 100px;">Acciones</th>
+                                        <th sec:authorize="hasAnyRole('JEFE', 'GERENTE') or hasAnyAuthority('JEFE', 'GERENTE')" class="text-end" style="width: 100px;">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -274,7 +276,7 @@
                                         <td th:text="${c.telefono ?: 'N/A'}" class="text-muted">6671000000</td>
                                         <td th:text="${c.correo ?: 'N/A'}" class="text-muted">correo@ejemplo.com</td>
                                         
-                                        <td sec:authorize="hasAnyRole('JEFE', 'GERENTE')" class="text-end">
+                                        <td sec:authorize="hasAnyRole('JEFE', 'GERENTE') or hasAnyAuthority('JEFE', 'GERENTE')" class="text-end">
                                             <form th:action="@{/clientes/eliminar/{id}(id=${c.id})}" method="post" 
                                                   onsubmit="return confirm('¿Estás seguro de que deseas dar de baja a este cliente?');" class="m-0">
                                                 <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -286,7 +288,7 @@
                                     </tr>
                                     
                                     <tr th:if="${#lists.isEmpty(clientes)}">
-                                        <td th:colspan="${#authorization.expression('hasAnyRole(''JEFE'', ''GERENTE'')')} ? 6 : 5" class="text-center text-muted py-4">
+                                        <td th:colspan="${#authorization.expression('hasAnyRole(''JEFE'', ''GERENTE'') or hasAnyAuthority(''JEFE'', ''GERENTE'')')} ? 6 : 5" class="text-center text-muted py-4">
                                             No hay clientes registrados en el sistema contable.
                                         </td>
                                     </tr>
