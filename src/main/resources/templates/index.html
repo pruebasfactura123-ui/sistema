@@ -146,70 +146,75 @@
 
     <div class="d-flex">
         <!-- BARRA LATERAL / SIDEBAR -->
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <i class="fas fa-check-double me-2 text-success"></i>
-                <span th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</span>
-            </div>
-            
-            <ul class="sidebar-menu mt-2">
-                <li class="sidebar-item active">
-                    <a th:href="@{/}"><i class="fas fa-chart-pie"></i> Inicio</a>
-                </li>
-                
-                <li class="sidebar-header">Operaciones</li>
-                <li class="sidebar-item">
-                    <a th:href="@{/facturas/nueva}"><i class="fas fa-file-invoice-dollar"></i> Crear Factura</a>
-                </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/facturas/historial}"><i class="fas fa-history"></i> Historial Facturas</a>
-                </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/operaciones/impuestos}"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
-                </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/operaciones/declaraciones}"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
-                </li>
-                <li class="sidebar-item">
-                    <a th:href="@{/operaciones/nominas}"><i class="fas fa-wallet"></i> Nóminas / Sueldos</a>
-                </li>
-                
-                <!-- SECCIÓN: ADMINISTRACIÓN (JEFE Y GERENTE) -->
-                <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')">
-                    <li class="sidebar-header">Administración</li>
-                    <li class="sidebar-item">
-                        <a th:href="@{/usuarios}"><i class="fas fa-users"></i> Trabajadores</a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a th:href="@{/clientes}"><i class="fas fa-handshake"></i> Clientes</a>
-                    </li>
-                    <li class="sidebar-item" sec:authorize="hasRole('JEFE')">
-                        <a th:href="@{/empresa}"><i class="fas fa-building"></i> Mi Empresa</a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a th:href="@{/operaciones/auditoria}"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
-                    </li>
-                </div>
-            </ul>
-            
-            <div class="sidebar-footer">
-                <a th:href="@{/perfil}" class="text-decoration-none" style="display: block;">
-                    <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                        <img th:src="${usuarioLogueado != null ? usuarioLogueado.fotoUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop'}" alt="Avatar">
-                        <div class="user-info">
-                            <span sec:authentication="name">Usuario</span>
-                            <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>
-                        </div>
-                    </div>
-                </a>
-                <div class="sidebar-item">
-                    <form th:action="@{/logout}" method="post" class="m-0">
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
-                        <button type="submit" class="btn-logout sidebar-item"><i class="fas fa-sign-out-alt me-2" style="width: 20px;"></i>Cerrar Sesión</button>
-                    </form>
+       <aside class="sidebar">
+    <div class="sidebar-brand">
+        <i class="fas fa-check-double me-2 text-success"></i>
+        <span th:text="${empresaNombre ?: 'OFICINA FISCAL'}">OFICINA FISCAL</span>
+    </div>
+    
+    <ul class="sidebar-menu mt-2">
+        <li class="sidebar-item active">
+            <a th:href="@{/}"><i class="fas fa-chart-pie"></i> Inicio</a>
+        </li>
+        
+        <li class="sidebar-header">Operaciones</li>
+        <li class="sidebar-item">
+            <a th:href="@{/facturas/nueva}"><i class="fas fa-file-invoice-dollar"></i> Crear Factura</a>
+        </li>
+        <li class="sidebar-item">
+            <a th:href="@{/facturas/historial}"><i class="fas fa-history"></i> Historial Facturas</a>
+        </li>
+        <li class="sidebar-item">
+            <a th:href="@{/operaciones/impuestos}"><i class="fas fa-calculator"></i> Calc. Impuestos</a>
+        </li>
+        <li class="sidebar-item">
+            <a th:href="@{/operaciones/declaraciones}"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
+        </li>
+        
+        <!-- Restringido: Solo JEFE o GERENTE -->
+        <li class="sidebar-item" sec:authorize="hasAnyRole('JEFE', 'GERENTE') or hasAnyAuthority('JEFE', 'GERENTE', 'ROLE_JEFE', 'ROLE_GERENTE')">
+            <a th:href="@{/operaciones/nominas}"><i class="fas fa-wallet"></i> Nóminas / Sueldos</a>
+        </li>
+        
+        <li class="sidebar-header">Administración</li>
+        
+        <!-- Visible para todos (incluido TRABAJADOR) -->
+        <li class="sidebar-item">
+            <a th:href="@{/clientes}"><i class="fas fa-handshake"></i> Clientes</a>
+        </li>
+        
+        <!-- Restringido a JEFE y GERENTE (Uso de th:block en lugar de div) -->
+        <th:block sec:authorize="hasAnyRole('JEFE', 'GERENTE') or hasAnyAuthority('JEFE', 'GERENTE', 'ROLE_JEFE', 'ROLE_GERENTE')">
+            <li class="sidebar-item">
+                <a th:href="@{/usuarios}"><i class="fas fa-users"></i> Trabajadores</a>
+            </li>
+            <li class="sidebar-item" sec:authorize="hasAnyRole('JEFE') or hasAuthority('ROLE_JEFE') or hasAuthority('JEFE')">
+                <a th:href="@{/empresa}"><i class="fas fa-building"></i> Mi Empresa</a>
+            </li>
+            <li class="sidebar-item">
+                <a th:href="@{/operaciones/auditoria}"><i class="fas fa-shield-alt"></i> Auditoría / Logs</a>
+            </li>
+        </th:block>
+    </ul>
+    
+    <div class="sidebar-footer">
+        <a th:href="@{/perfil}" class="text-decoration-none" style="display: block;">
+            <div class="sidebar-user" style="transition: background 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                <img th:src="${usuarioLogueado != null and usuarioLogueado.fotoUrl != null ? usuarioLogueado.fotoUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop'}" alt="Avatar">
+                <div class="user-info">
+                    <span sec:authentication="name">Usuario</span>
+                    <span class="user-status"><i class="fas fa-circle me-1" style="font-size: 0.45rem;"></i> ONLINE</span>
                 </div>
             </div>
-        </aside>
+        </a>
+        <div class="sidebar-item">
+            <form th:action="@{/logout}" method="post" class="m-0">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf}" />
+                <button type="submit" class="btn-logout sidebar-item"><i class="fas fa-sign-out-alt me-2" style="width: 20px;"></i>Cerrar Sesión</button>
+            </form>
+        </div>
+    </div>
+</aside>
 
         <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">
