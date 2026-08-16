@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Generar Nueva Factura</title>
+    <!-- Meta tags para incluir los tokens CSRF si Spring Security está activo -->
+    <meta th:if="${_csrf}" name="_csrf" th:content="${_csrf.token}"/>
+    <meta th:if="${_csrf}" name="_csrf_header" th:content="${_csrf.headerName}"/>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link class="a" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
             --navy: #0f172a; 
@@ -184,7 +188,6 @@
 <body>
 
     <aside class="sidebar">
-        <!-- 100% DINÁMICO: Toma el nombre exacto enviado desde la variable empresaNombre -->
         <h4 th:text="${empresaNombre ?: 'Sistema Contable'}">Sistema Contable</h4>
 
         <nav class="nav flex-column flex-grow-1">
@@ -237,7 +240,6 @@
                             <i class="fas fa-building fa-2x text-dark"></i>
                         </div>
                         <div>
-                            <!-- 100% DINÁMICO: Razón Social del emisor tomada desde el backend -->
                             <h5 class="fw-bold m-0 text-dark" style="font-size: 1.2rem;" 
                                 th:text="${empresaNombre ?: 'Sistema Contable'}">Sistema Contable</h5>
 
@@ -263,7 +265,7 @@
                     <div class="invoice-block-box h-100">
                         <div class="section-title"><i class="fas fa-user-tie me-2"></i>Datos del Receptor</div>
                         <div class="mb-2">
-                            <label class="form-label">Seleccionar Cliente (Razón Social)</label>
+                            <label class="form-label" for="clienteSelect">Seleccionar Cliente (Razón Social)</label>
                             <select class="form-select" id="clienteSelect">
                                 <option value="" disabled>-- Seleccione el contribuyente receptor --</option>
                                 <option value="ESCUELA DE KITERS UNIDOS" data-rfc="EKU9003173C9" selected>ESCUELA DE KITERS UNIDOS (EKU9003173C9)</option>
@@ -281,14 +283,14 @@
                         <div class="section-title"><i class="fas fa-hand-holding-usd me-2"></i>Condiciones de Pago</div>
                         <div class="row g-2">
                             <div class="col-6">
-                                <label class="form-label">Método de Pago</label>
+                                <label class="form-label" for="metodoPagoSelect">Método de Pago</label>
                                 <select class="form-select" id="metodoPagoSelect">
                                     <option value="PUE">PUE - Pago en una sola exhibición</option>
                                     <option value="PPD">PPD - Pago en parcialidades o diferido</option>
                                 </select>
                             </div>
                             <div class="col-6">
-                                <label class="form-label">Forma de Pago</label>
+                                <label class="form-label" for="formaPagoSelect">Forma de Pago</label>
                                 <select class="form-select" id="formaPagoSelect">
                                     <option value="03">03 - Transferencia electrónica (SPEI)</option>
                                     <option value="01">01 - Efectivo</option>
@@ -305,15 +307,15 @@
                 <div class="fw-bold text-dark mb-2" style="font-size: 0.82rem;"><i class="fas fa-plus-circle text-primary me-1"></i> AGREGAR PARTIDA DE FACTURA (DETALLE FISCAL)</div>
                 <div class="row g-2 align-items-end">
                     <div class="col-md-5">
-                        <label class="form-label">Descripción del Concepto / Servicio</label>
+                        <label class="form-label" for="inputDescripcion">Descripción del Concepto / Servicio</label>
                         <input type="text" class="form-control" id="inputDescripcion" placeholder="Ej: Desarrollo de software">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Cantidad</label>
+                        <label class="form-label" for="inputCantidad">Cantidad</label>
                         <input type="number" class="form-control text-center" id="inputCantidad" placeholder="1" min="1">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Valor Unitario ($)</label>
+                        <label class="form-label" for="inputPrecio">Valor Unitario ($)</label>
                         <input type="number" class="form-control text-end" id="inputPrecio" placeholder="100.00" step="0.01">
                     </div>
                     <div class="col-md-2">
@@ -418,8 +420,8 @@
             const cantidad = parseInt(cantidadInput);
             const precioUnitario = parseFloat(precioInput);
 
-            if (cantidad <= 0 || precioUnitario <= 0) {
-                alert('La cantidad y el valor unitario deben ser mayores a cero.');
+            if (isNaN(cantidad) || isNaN(precioUnitario) || cantidad <= 0 || precioUnitario <= 0) {
+                alert('La cantidad y el valor unitario deben ser números válidos mayores a cero.');
                 return;
             }
 
@@ -464,11 +466,11 @@
                     <tr class="text-center">
                         <td class="font-monospace text-secondary fw-bold">${claveSat}</td>
                         <td class="font-monospace text-muted" style="font-size:0.8rem;">${claveInt}</td>
-                        <td style="text-align: left;" class="fw-semibold text-dark">${c.descripcion}</td>
+                        <td style="text-align: left;" class="fw-semibold text-dark">${escapeHtml(c.descripcion)}</td>
                         <td class="text-secondary">${unidadSat}</td>
                         <td class="fw-bold text-dark">${c.cantidad}</td>
-                        <td class="text-end font-monospace">$${c.precioUnitario.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                        <td class="text-end font-monospace fw-bold text-dark">$${c.importe.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td class="text-end font-monospace">$${c.precioUnitario.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="text-end font-monospace fw-bold text-dark">$${c.importe.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td class="text-muted" style="font-size:0.78rem;">IVA 16%</td>
                         <td>
                             <button type="button" class="btn btn-link text-danger p-0 m-0" onclick="eliminarConcepto(${index})"><i class="fas fa-trash-alt"></i></button>
@@ -480,9 +482,15 @@
             const iva = subtotal * 0.16;
             const total = subtotal + iva;
 
-            document.getElementById('spanSubtotal').innerText = `$${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            document.getElementById('spanIva').innerText = `$${iva.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            document.getElementById('spanTotal').innerText = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('spanSubtotal').innerText = `$${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('spanIva').innerText = `$${iva.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('spanTotal').innerText = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
         }
 
         window.eliminarConcepto = function(index) {
@@ -525,8 +533,17 @@
             btnGuardarFactura.disabled = true;
             btnGuardarFactura.innerText = 'Generando Sello Digital...';
 
+            // Configuración de encabezados para incluir el Token CSRF si existe
+            const headers = {};
+            const tokenMeta = document.querySelector('meta[name="_csrf"]');
+            const headerMeta = document.querySelector('meta[name="_csrf_header"]');
+            if (tokenMeta && headerMeta) {
+                headers[headerMeta.getAttribute('content')] = tokenMeta.getAttribute('content');
+            }
+
             fetch('/facturas/guardar', {
                 method: 'POST',
+                headers: headers,
                 body: formData
             })
             .then(response => {
