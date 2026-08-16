@@ -157,7 +157,9 @@
                 <li class="sidebar-item">
                     <a th:href="@{/operaciones/declaraciones}"><i class="fas fa-calendar-check"></i> Declaraciones SAT</a>
                 </li>
-                <li class="sidebar-item">
+                
+                <!-- Solo visible para GERENTE y JEFE -->
+                <li class="sidebar-item" sec:authorize="hasAnyRole('GERENTE', 'JEFE', 'ROLE_GERENTE', 'ROLE_JEFE')">
                     <a th:href="@{/operaciones/nominas}"><i class="fas fa-file-invoice-dollar"></i> Nóminas / Sueldos</a>
                 </li>
                 
