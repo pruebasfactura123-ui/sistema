@@ -25,11 +25,11 @@ public class Asistencia {
     @Column(name = "hora_salida", nullable = true)
     private LocalTime horaSalida;
 
-    // NUEVO: Estado del pase de lista (ASISTENCIA, RETARDO, FALTA, JUSTIFICADO)
-    @Column(name = "estado", nullable = false, length = 20)
+    // ACTUALIZADO: Con columnDefinition para asignar 'ASISTENCIA' por defecto en SQL Server a las filas existentes
+    @Column(name = "estado", nullable = false, length = 20, columnDefinition = "VARCHAR(20) DEFAULT 'ASISTENCIA'")
     private String estado = "ASISTENCIA";
 
-    // NUEVO: Observaciones o justificación ingresadas por el Jefe
+    // Observaciones o justificación ingresadas por el Jefe
     @Column(name = "observaciones", nullable = true, length = 255)
     private String observaciones;
 
