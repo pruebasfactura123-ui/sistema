@@ -42,15 +42,17 @@ public class AsistenciaController {
     // PASE DE LISTA GENERAL (Exclusivo para JEFE / GERENTE)
     // =========================================================================
     @PostMapping("/pase-lista")
-    public String registrarPaseLista(@RequestParam("usuarioId") List<Long> usuarioIds,
-                                     @RequestParam("estado") List<String> estados,
+    public String registrarPaseLista(@RequestParam(value = "usuarioId", required = false) List<Long> usuarioIds,
+                                     @RequestParam(value = "estado", required = false) List<String> estados,
                                      @RequestParam(value = "observaciones", required = false) List<String> observaciones,
                                      Authentication authentication,
                                      RedirectAttributes redirectAttributes,
                                      HttpServletRequest request) {
 
         String paginaOrigen = request.getHeader("Referer");
-        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/usuarios";
+        String redireccionDestino = (paginaOrigen != null && !paginaOrigen.contains("/asistencia/pase-lista")) 
+                ? "redirect:" + paginaOrigen 
+                : "redirect:/usuarios";
 
         // 1. Validar que quien ejecuta sea un Jefe/Gerente
         boolean esJefe = authentication.getAuthorities().stream()
@@ -63,19 +65,24 @@ public class AsistenciaController {
             return redireccionDestino;
         }
 
+        if (usuarioIds == null || usuarioIds.isEmpty()) {
+            redirectAttributes.addFlashAttribute("alertaAsistencia", "No hay empleados disponibles para pasar lista.");
+            return redireccionDestino;
+        }
+
         try {
             String usuarioLogueado = authentication.getName();
             int procesados = 0;
 
-            // 2. Recorrer la lista enviada desde la tabla HTML
+            // 2. Recorrer todos los empleados de la tabla y guardar su registro en la BD
             for (int i = 0; i < usuarioIds.size(); i++) {
                 Long uId = usuarioIds.get(i);
-                String estadoStr = estados.get(i);
+                String estadoStr = (estados != null && i < estados.size()) ? estados.get(i) : "ASISTENCIA";
                 String obsStr = (observaciones != null && i < observaciones.size()) ? observaciones.get(i) : "";
 
                 Usuario empleado = usuarioRepository.findById(uId).orElse(null);
 
-                // Regla de negocio: Ignorar al usuario activo (no se hace pase de lista a sí mismo)
+                // Regla: No registrar asistencia si es el mismo Jefe/Gerente autenticado
                 if (empleado == null || empleado.getUsername().equalsIgnoreCase(usuarioLogueado)) {
                     continue; 
                 }
@@ -98,7 +105,8 @@ public class AsistenciaController {
                 procesados++;
             }
 
-            redirectAttributes.addFlashAttribute("exitoAsistencia", "Pase de lista registrado para " + procesados + " empleados.");
+            // 3. Alerta de éxito enviada a la vista tras redireccionar
+            redirectAttributes.addFlashAttribute("exitoAsistencia", "¡Pase de lista guardado con éxito! Se registraron " + procesados + " asistencias.");
 
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("alertaAsistencia", "Error al procesar el pase de lista: " + e.getMessage());
