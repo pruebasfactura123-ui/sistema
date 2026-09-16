@@ -1,29 +1,23 @@
-/*package com.example.sistema.controller;
+package com.example.sistema.controller;
 
 import com.example.sistema.model.Asistencia;
 import com.example.sistema.model.Usuario;
 import com.example.sistema.repository.AsistenciaRepository;
 import com.example.sistema.repository.UsuarioRepository;
-import com.example.sistema.repository.AuditoriaRepository; // Asegúrate de tener este import
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Optional;
 
 @Controller
-@RequestMapping("/operaciones/auditoria")
 public class AsistenciaController {
 
     @Autowired
@@ -32,44 +26,8 @@ public class AsistenciaController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    @Autowired(required = false)
-    private AuditoriaRepository auditoriaRepository;
-
-    // =========================================================================
-    // VISTA DE AUDITORÍA Y ASISTENCIAS AGRUPADAS POR SEMANAS
-    // =========================================================================
-    @GetMapping
-    public String verAuditoriaYAsistencias(Principal principal, Model model) {
-        if (principal == null) {
-            return "redirect:/login";
-        }
-
-        // 1. Cargar auditorías
-        if (auditoriaRepository != null) {
-            model.addAttribute("auditorias", auditoriaRepository.findAll());
-        }
-
-        // 2. Cargar asistencias y agruparlas por semanas descendentemente
-        List<Asistencia> listaAsistencias = asistenciaRepository.findAll();
-
-        Map<String, List<Asistencia>> asistenciasPorSemana = listaAsistencias.stream()
-                .filter(a -> a.getFecha() != null)
-                .sorted(Comparator.comparing(Asistencia::getFecha).reversed())
-                .collect(Collectors.groupingBy(
-                        Asistencia::getEtiquetaSemana,
-                        LinkedHashMap::new,
-                        Collectors.toList()
-                ));
-
-        model.addAttribute("asistenciasPorSemana", asistenciasPorSemana);
-
-        return "auditoria";
-    }
-
-    // =========================================================================
-    // PASE DE LISTA GENERAL (Exclusivo para JEFE / GERENTE)
-    // =========================================================================
-    @PostMapping("/pase-lista")
+    // Responde tanto a /asistencia/pase-lista como a /operaciones/asistencia/pase-lista
+    @PostMapping({"/asistencia/pase-lista", "/operaciones/asistencia/pase-lista"})
     public String registrarPaseLista(@RequestParam(value = "usuarioId", required = false) List<Long> usuarioIds,
                                      @RequestParam(value = "estado", required = false) List<String> estados,
                                      @RequestParam(value = "observaciones", required = false) List<String> observaciones,
@@ -78,7 +36,7 @@ public class AsistenciaController {
                                      HttpServletRequest request) {
 
         String paginaOrigen = request.getHeader("Referer");
-        String redireccionDestino = (paginaOrigen != null && !paginaOrigen.contains("/asistencia/pase-lista")) 
+        String redireccionDestino = (paginaOrigen != null && !paginaOrigen.contains("/pase-lista")) 
                 ? "redirect:" + paginaOrigen 
                 : "redirect:/usuarios";
 
@@ -139,4 +97,3 @@ public class AsistenciaController {
         return redireccionDestino;
     }
 }
- */
