@@ -4,9 +4,11 @@ import com.example.sistema.model.Asistencia;
 import com.example.sistema.model.Usuario;
 import com.example.sistema.repository.AsistenciaRepository;
 import com.example.sistema.repository.UsuarioRepository;
+import com.example.sistema.repository.AuditoriaRepository; // Asegúrate de tener este import
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,11 +19,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
-@RequestMapping("/asistencia")
+@RequestMapping("/operaciones/auditoria")
 public class AsistenciaController {
 
     @Autowired
@@ -30,12 +32,38 @@ public class AsistenciaController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired(required = false)
+    private AuditoriaRepository auditoriaRepository;
+
+    // =========================================================================
+    // VISTA DE AUDITORÍA Y ASISTENCIAS AGRUPADAS POR SEMANAS
+    // =========================================================================
     @GetMapping
-    public String verAsistencias(Principal principal) {
+    public String verAuditoriaYAsistencias(Principal principal, Model model) {
         if (principal == null) {
             return "redirect:/login";
         }
-        return "redirect:/operaciones/auditoria";
+
+        // 1. Cargar auditorías
+        if (auditoriaRepository != null) {
+            model.addAttribute("auditorias", auditoriaRepository.findAll());
+        }
+
+        // 2. Cargar asistencias y agruparlas por semanas descendentemente
+        List<Asistencia> listaAsistencias = asistenciaRepository.findAll();
+
+        Map<String, List<Asistencia>> asistenciasPorSemana = listaAsistencias.stream()
+                .filter(a -> a.getFecha() != null)
+                .sorted(Comparator.comparing(Asistencia::getFecha).reversed())
+                .collect(Collectors.groupingBy(
+                        Asistencia::getEtiquetaSemana,
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        model.addAttribute("asistenciasPorSemana", asistenciasPorSemana);
+
+        return "auditoria";
     }
 
     // =========================================================================
@@ -54,7 +82,6 @@ public class AsistenciaController {
                 ? "redirect:" + paginaOrigen 
                 : "redirect:/usuarios";
 
-        // 1. Validar que quien ejecuta sea un Jefe/Gerente
         boolean esJefe = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("JEFE") || a.getAuthority().equals("ROLE_JEFE") 
                             || a.getAuthority().equals("GERENTE") || a.getAuthority().equals("ROLE_GERENTE")
@@ -74,7 +101,6 @@ public class AsistenciaController {
             String usuarioLogueado = authentication.getName();
             int procesados = 0;
 
-            // 2. Recorrer todos los empleados de la tabla y guardar su registro en la BD
             for (int i = 0; i < usuarioIds.size(); i++) {
                 Long uId = usuarioIds.get(i);
                 String estadoStr = (estados != null && i < estados.size()) ? estados.get(i) : "ASISTENCIA";
@@ -82,7 +108,6 @@ public class AsistenciaController {
 
                 Usuario empleado = usuarioRepository.findById(uId).orElse(null);
 
-                // Regla: No registrar asistencia si es el mismo Jefe/Gerente autenticado
                 if (empleado == null || empleado.getUsername().equalsIgnoreCase(usuarioLogueado)) {
                     continue; 
                 }
@@ -105,7 +130,6 @@ public class AsistenciaController {
                 procesados++;
             }
 
-            // 3. Alerta de éxito enviada a la vista tras redireccionar
             redirectAttributes.addFlashAttribute("exitoAsistencia", "¡Pase de lista guardado con éxito! Se registraron " + procesados + " asistencias.");
 
         } catch (Exception e) {
