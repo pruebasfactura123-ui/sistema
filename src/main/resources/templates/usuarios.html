@@ -315,60 +315,63 @@
                     </div>
                 </div>
 
-                <!-- PESTAÑA 2: PASE DE LISTA DIARIO -->
-                <div class="tab-pane fade" id="paselista-pane" role="tabpanel">
-                    <div class="card-custom">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold m-0" style="color: var(--navy);"><i class="fas fa-calendar-day me-2 text-muted"></i> Registro de Asistencia del Día</h6>
-                            <span class="badge bg-light text-dark border px-3 py-2" style="font-size: 0.75rem;"><i class="far fa-clock me-1 text-primary"></i> Fecha: <strong th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}">16/09/2026</strong></span>
-                        </div>
+               <!-- PESTAÑA 2: PASE DE LISTA DIARIO -->
+<div class="tab-pane fade" id="paselista-pane" role="tabpanel">
+    <div class="card-custom">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold m-0" style="color: var(--navy);"><i class="fas fa-calendar-day me-2 text-muted"></i> Registro de Asistencia del Día</h6>
+            <span class="badge bg-light text-dark border px-3 py-2" style="font-size: 0.75rem;"><i class="far fa-clock me-1 text-primary"></i> Fecha: <strong th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}">16/09/2026</strong></span>
+        </div>
 
-                        <form th:action="@{/asistencias/guardar-masivo}" method="post">
-                            <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <!-- RUTA CORREGIDA: coincide con AsistenciaController -->
+        <form th:action="@{/asistencia/pase-lista}" method="post">
+            <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 
-                            <div class="table-responsive">
-                                <table class="table align-middle m-0">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 50px;">Foto</th>
-                                            <th>Empleado</th>
-                                            <th>Cargo</th>
-                                            <th style="width: 200px;">E-status Asistencia</th>
-                                            <th>Observaciones / Justificación</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr th:each="u, iterStat : ${usuarios}">
-                                            <td>
-                                                <img th:src="${u.fotoUrl != null && !u.fotoUrl.isEmpty() ? u.fotoUrl : 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" class="avatar-emp" alt="Empleado">
-                                                <input type="hidden" th:name="'registros[' + ${iterStat.index} + '].usuarioId'" th:value="${u.id}" />
-                                            </td>
-                                            <td class="fw-bold text-navy" th:text="${u.username}">Nombre</td>
-                                            <td><span class="badge bg-secondary px-2 py-1" style="font-size: 0.6rem; border-radius: 6px;" th:text="${u.rol}">ROL</span></td>
-                                            <td>
-                                                <select th:name="'registros[' + ${iterStat.index} + '].estado'" class="form-select form-select-sm" style="font-size: 0.75rem; border-radius: 6px;" required>
-                                                    <option value="ASISTENCIA" selected>Asistencia</option>
-                                                    <option value="RETARDO">Retardo</option>
-                                                    <option value="FALTA">Falta</option>
-                                                    <option value="JUSTIFICADO">Justificado</option>
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <input type="text" th:name="'registros[' + ${iterStat.index} + '].observaciones'" class="form-control form-control-sm" placeholder="Escribe un motivo u observación opcional..." style="font-size: 0.75rem; border-radius: 6px;">
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+            <div class="table-responsive">
+                <table class="table align-middle m-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">Foto</th>
+                            <th>Empleado</th>
+                            <th>Cargo</th>
+                            <th style="width: 200px;">E-status Asistencia</th>
+                            <th>Observaciones / Justificación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- FILTRO: Ignora al usuario autenticado (Jefe) -->
+                        <tr th:each="u : ${usuarios}" th:if="${u.username != #authentication.name}">
+                            <td>
+                                <img th:src="${u.fotoUrl != null && !u.fotoUrl.isEmpty() ? u.fotoUrl : 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" class="avatar-emp" alt="Empleado">
+                                <!-- Envia el ID individual -->
+                                <input type="hidden" name="usuarioId" th:value="${u.id}" />
+                            </td>
+                            <td class="fw-bold text-navy" th:text="${u.username}">Nombre</td>
+                            <td><span class="badge bg-secondary px-2 py-1" style="font-size: 0.6rem; border-radius: 6px;" th:text="${u.rol}">ROL</span></td>
+                            <td>
+                                <select name="estado" class="form-select form-select-sm" style="font-size: 0.75rem; border-radius: 6px;" required>
+                                    <option value="ASISTENCIA" selected>Asistencia</option>
+                                    <option value="RETARDO">Retardo</option>
+                                    <option value="FALTA">Falta</option>
+                                    <option value="JUSTIFICADO">Justificado</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" name="observaciones" class="form-control form-control-sm" placeholder="Escribe un motivo u observación opcional..." style="font-size: 0.75rem; border-radius: 6px;">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                            <div class="mt-3 text-end">
-                                <button type="submit" class="btn btn-navy btn-sm fw-bold px-4 py-2 rounded-pill" style="font-size: 0.75rem;">
-                                    <i class="fas fa-save me-1"></i> Guardar Pase de Lista
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            <div class="mt-3 text-end">
+                <button type="submit" class="btn btn-navy btn-sm fw-bold px-4 py-2 rounded-pill" style="font-size: 0.75rem;">
+                    <i class="fas fa-save me-1"></i> Guardar Pase de Lista
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
             </div>
         </main>

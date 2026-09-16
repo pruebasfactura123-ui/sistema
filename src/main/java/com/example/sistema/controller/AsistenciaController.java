@@ -30,23 +30,6 @@ public class AsistenciaController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    private Usuario getUsuarioLogueado(Principal principal) {
-        if (principal == null) {
-            throw new RuntimeException("No hay ninguna sesión activa.");
-        }
-        if ("admin".equalsIgnoreCase(principal.getName())) {
-            Usuario adminFicticio = new Usuario();
-            adminFicticio.setUsername("admin");
-            adminFicticio.setRol("JEFE");
-            return adminFicticio;
-        }
-        return usuarioRepository.findByUsername(principal.getName())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado en el sistema."));
-    }
-
-    // =========================================================================
-    // VER ASISTENCIAS
-    // =========================================================================
     @GetMapping
     public String verAsistencias(Principal principal) {
         if (principal == null) {
@@ -59,19 +42,20 @@ public class AsistenciaController {
     // PASE DE LISTA GENERAL (Exclusivo para JEFE / GERENTE)
     // =========================================================================
     @PostMapping("/pase-lista")
-    public String registrarPaseLista(@RequestParam("usuarioId") Long usuarioId,
-                                     @RequestParam("estado") String estado,
-                                     @RequestParam(value = "observaciones", required = false) String observaciones,
+    public String registrarPaseLista(@RequestParam("usuarioId") List<Long> usuarioIds,
+                                     @RequestParam("estado") List<String> estados,
+                                     @RequestParam(value = "observaciones", required = false) List<String> observaciones,
                                      Authentication authentication,
                                      RedirectAttributes redirectAttributes,
                                      HttpServletRequest request) {
 
         String paginaOrigen = request.getHeader("Referer");
-        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/operaciones/trabajadores";
+        String redireccionDestino = (paginaOrigen != null) ? "redirect:" + paginaOrigen : "redirect:/usuarios";
 
         // 1. Validar que quien ejecuta sea un Jefe/Gerente
         boolean esJefe = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("JEFE") || a.getAuthority().equals("ROLE_JEFE") 
+                            || a.getAuthority().equals("GERENTE") || a.getAuthority().equals("ROLE_GERENTE")
                             || a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
 
         if (!esJefe) {
@@ -80,31 +64,41 @@ public class AsistenciaController {
         }
 
         try {
-            // 2. Buscar al empleado al que se le pasa lista
-            Usuario empleado = usuarioRepository.findById(usuarioId)
-                    .orElseThrow(() -> new RuntimeException("Empleado no encontrado."));
+            String usuarioLogueado = authentication.getName();
+            int procesados = 0;
 
-            LocalDate hoy = LocalDate.now();
-            Optional<Asistencia> existencia = asistenciaRepository.findByUsuarioAndFecha(empleado, hoy);
+            // 2. Recorrer la lista enviada desde la tabla HTML
+            for (int i = 0; i < usuarioIds.size(); i++) {
+                Long uId = usuarioIds.get(i);
+                String estadoStr = estados.get(i);
+                String obsStr = (observaciones != null && i < observaciones.size()) ? observaciones.get(i) : "";
 
-            Asistencia asistencia;
-            if (existencia.isPresent()) {
-                asistencia = existencia.get();
-            } else {
-                asistencia = new Asistencia();
-                asistencia.setUsuario(empleado);
-                asistencia.setFecha(hoy);
-                asistencia.setHoraEntrada(LocalTime.now());
+                Usuario empleado = usuarioRepository.findById(uId).orElse(null);
+
+                // Regla de negocio: Ignorar al usuario activo (no se hace pase de lista a sí mismo)
+                if (empleado == null || empleado.getUsername().equalsIgnoreCase(usuarioLogueado)) {
+                    continue; 
+                }
+
+                LocalDate hoy = LocalDate.now();
+                Optional<Asistencia> existencia = asistenciaRepository.findByUsuarioAndFecha(empleado, hoy);
+
+                Asistencia asistencia = existencia.orElseGet(() -> {
+                    Asistencia nueva = new Asistencia();
+                    nueva.setUsuario(empleado);
+                    nueva.setFecha(hoy);
+                    nueva.setHoraEntrada(LocalTime.now());
+                    return nueva;
+                });
+
+                asistencia.setEstado(estadoStr);
+                asistencia.setObservaciones(obsStr);
+
+                asistenciaRepository.save(asistencia);
+                procesados++;
             }
 
-            // 3. Guardar estado (ASISTENCIA, RETARDO, FALTA, JUSTIFICADO)
-            asistencia.setEstado(estado);
-            if (observaciones != null) {
-                asistencia.setObservaciones(observaciones);
-            }
-
-            asistenciaRepository.save(asistencia);
-            redirectAttributes.addFlashAttribute("exitoAsistencia", "Asistencia de " + empleado.getUsername() + " registrada correctamente.");
+            redirectAttributes.addFlashAttribute("exitoAsistencia", "Pase de lista registrado para " + procesados + " empleados.");
 
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("alertaAsistencia", "Error al procesar el pase de lista: " + e.getMessage());
