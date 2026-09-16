@@ -124,9 +124,9 @@ public class AuditoriaController {
     }
 
     // =========================================================================
-    // PASE DE LISTA GENERAL (/operaciones/asistencia/pase-lista)
+    // PASE DE LISTA GENERAL (Soporta /asistencia/pase-lista y /operaciones/asistencia/pase-lista)
     // =========================================================================
-    @PostMapping("/asistencia/pase-lista")
+    @PostMapping(value = {"/asistencia/pase-lista", "/pase-lista", "/operaciones/asistencia/pase-lista"})
     public String registrarPaseLista(@RequestParam(value = "usuarioId", required = false) List<Long> usuarioIds,
                                      @RequestParam(value = "estado", required = false) List<String> estados,
                                      @RequestParam(value = "observaciones", required = false) List<String> observaciones,
@@ -135,7 +135,7 @@ public class AuditoriaController {
                                      HttpServletRequest request) {
 
         String paginaOrigen = request.getHeader("Referer");
-        String redireccionDestino = (paginaOrigen != null && !paginaOrigen.contains("/asistencia/pase-lista")) 
+        String redireccionDestino = (paginaOrigen != null && !paginaOrigen.contains("/pase-lista")) 
                 ? "redirect:" + paginaOrigen 
                 : "redirect:/usuarios";
 
