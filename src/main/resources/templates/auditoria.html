@@ -343,66 +343,64 @@
                     <div class="tab-pane fade" id="asistencias" role="tabpanel" aria-labelledby="asistencias-tab">
                         
                         <div class="accordion" id="accordionAsistencias">
-                            <th:block th:each="entry, iter : ${asistenciasPorSemana}">
-                                <div class="accordion-item shadow-sm">
-                                    <h2 class="accordion-header" th:id="'heading' + ${iter.index}">
-                                        <button class="accordion-button" 
-                                                th:classappend="${iter.first} ? '' : 'collapsed'" 
-                                                type="button" 
-                                                data-bs-toggle="collapse" 
-                                                th:data-bs-target="'#collapse' + ${iter.index}" 
-                                                th:aria-expanded="${iter.first}" 
-                                                th:aria-controls="'collapse' + ${iter.index}">
-                                            <i class="fas fa-calendar-week me-2 text-primary"></i>
-                                            <span th:text="${entry.key}">Semana X (00/00/0000 - 00/00/0000)</span>
-                                            <span class="badge bg-secondary ms-auto me-3" th:text="${#lists.size(entry.value)} + ' registros'">0 registros</span>
-                                        </button>
-                                    </h2>
+                            <div class="accordion-item shadow-sm" th:each="entry, iter : ${asistenciasPorSemana}">
+                                <h2 class="accordion-header" th:id="'heading' + ${iter.index}">
+                                    <button class="accordion-button" 
+                                            th:classappend="${iter.first} ? '' : 'collapsed'" 
+                                            type="button" 
+                                            data-bs-toggle="collapse" 
+                                            th:data-bs-target="'#collapse' + ${iter.index}" 
+                                            th:aria-expanded="${iter.first}" 
+                                            th:aria-controls="'collapse' + ${iter.index}">
+                                        <i class="fas fa-calendar-week me-2 text-primary"></i>
+                                        <span th:text="${entry.key}">Semana X (00/00/0000 - 00/00/0000)</span>
+                                        <span class="badge bg-secondary ms-auto me-3" th:text="${#lists.size(entry.value)} + ' registros'">0 registros</span>
+                                    </button>
+                                </h2>
 
-                                    <div th:id="'collapse' + ${iter.index}" 
-                                         class="accordion-collapse collapse" 
-                                         th:classappend="${iter.first} ? 'show' : ''" 
-                                         th:aria-labelledby="'heading' + ${iter.index}" 
-                                         data-bs-parent="#accordionAsistencias">
-                                        <div class="accordion-body p-0">
-                                            <div class="table-responsive">
-                                                <table class="table align-middle m-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Empleado</th>
-                                                            <th>Fecha Jornada</th>
-                                                            <th>Hora Registro</th>
-                                                            <th>Estado Asistencia</th>
-                                                            <th>Observaciones / Justificación</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr th:each="as : ${entry.value}">
-                                                            <td class="fw-bold" style="color: var(--navy);" 
-                                                                th:text="${as.usuario != null ? (as.usuario.nombre != null ? as.usuario.nombre + ' ' + as.usuario.apellido : as.usuario.username) : 'Desconocido'}">Nombre</td>
-                                                            <td class="text-dark" th:text="${as.fecha != null ? #temporals.format(as.fecha, 'EEEE dd/MM/yyyy') : '---'}">Lunes 01/01/2026</td>
-                                                            <td>
-                                                                <span class="badge bg-light text-dark border px-2 py-1 fw-bold" style="font-size: 0.7rem;"
-                                                                      th:text="${as.horaEntrada != null ? #temporals.format(as.horaEntrada, 'HH:mm:ss') : '--:--'}">08:00:00</span>
-                                                            </td>
-                                                            <td>
-                                                                <span th:if="${as.estado == 'ASISTENCIA'}" class="badge bg-success text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-check me-1"></i>Asistencia</span>
-                                                                <span th:if="${as.estado == 'RETARDO'}" class="badge bg-warning text-dark px-2 py-1 fw-bold" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-clock me-1"></i>Retardo</span>
-                                                                <span th:if="${as.estado == 'FALTA'}" class="badge bg-danger text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-times me-1"></i>Falta</span>
-                                                                <span th:if="${as.estado == 'JUSTIFICADO'}" class="badge bg-info text-dark px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-file-alt me-1"></i>Justificado</span>
-                                                                <span th:if="${as.estado == null}" class="badge bg-secondary text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;">Sin Registrar</span>
-                                                            </td>
-                                                            <td class="text-muted" style="font-size: 0.8rem;" th:text="${as.observaciones != null && !as.observaciones.isEmpty() ? as.observaciones : 'Sin observaciones'}">
-                                                                Ninguna
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                <div th:id="'collapse' + ${iter.index}" 
+                                     class="accordion-collapse collapse" 
+                                     th:classappend="${iter.first} ? 'show' : ''" 
+                                     th:aria-labelledby="'heading' + ${iter.index}" 
+                                     data-bs-parent="#accordionAsistencias">
+                                    <div class="accordion-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table align-middle m-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Empleado</th>
+                                                        <th>Fecha Jornada</th>
+                                                        <th>Hora Registro</th>
+                                                        <th>Estado Asistencia</th>
+                                                        <th>Observaciones / Justificación</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr th:each="as : ${entry.value}">
+                                                        <td class="fw-bold" style="color: var(--navy);" 
+                                                            th:text="${as.usuario != null ? (as.usuario.nombre != null ? as.usuario.nombre + ' ' + as.usuario.apellido : as.usuario.username) : 'Desconocido'}">Nombre</td>
+                                                        <td class="text-dark" th:text="${as.fecha != null ? #temporals.format(as.fecha, 'EEEE dd/MM/yyyy') : '---'}">Lunes 01/01/2026</td>
+                                                        <td>
+                                                            <span class="badge bg-light text-dark border px-2 py-1 fw-bold" style="font-size: 0.7rem;"
+                                                                  th:text="${as.horaEntrada != null ? #temporals.format(as.horaEntrada, 'HH:mm:ss') : '--:--'}">08:00:00</span>
+                                                        </td>
+                                                        <td>
+                                                            <span th:if="${as.estado == 'ASISTENCIA'}" class="badge bg-success text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-check me-1"></i>Asistencia</span>
+                                                            <span th:if="${as.estado == 'RETARDO'}" class="badge bg-warning text-dark px-2 py-1 fw-bold" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-clock me-1"></i>Retardo</span>
+                                                            <span th:if="${as.estado == 'FALTA'}" class="badge bg-danger text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-times me-1"></i>Falta</span>
+                                                            <span th:if="${as.estado == 'JUSTIFICADO'}" class="badge bg-info text-dark px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-file-alt me-1"></i>Justificado</span>
+                                                            <span th:if="${as.estado == null}" class="badge bg-secondary text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;">Sin Registrar</span>
+                                                        </td>
+                                                        <td class="text-muted" style="font-size: 0.8rem;" th:text="${as.observaciones != null && !as.observaciones.isEmpty() ? as.observaciones : 'Sin observaciones'}">
+                                                            Ninguna
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 </div>
-                            </th:block>
+                            </div>
 
                             <div th:if="${#maps.isEmpty(asistenciasPorSemana)}" class="card-custom text-center text-muted py-4">
                                 <i class="fas fa-info-circle me-1"></i> Ningún registro de asistencia encontrado en la bitácora.
