@@ -180,7 +180,6 @@
         /* Audit Badges */
         .badge-audit { font-size: 0.65rem; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
 
-        /* Support for small screens */
         @media (max-width: 768px) {
             .sidebar { width: 100%; position: relative; min-height: auto; }
             .main-content { margin-left: 0; padding: 20px; }
@@ -335,10 +334,10 @@
                         </div>
                     </div>
 
-                    <!-- Tab 2: Control de Asistencias -->
+                    <!-- Tab 2: Control de Asistencias (ACTUALIZADO PARA MOSTRAR ESTADO Y OBSERVACIONES) -->
                     <div class="tab-pane fade" id="asistencias" role="tabpanel" aria-labelledby="asistencias-tab">
                         <div class="card-custom">
-                            <h6 class="fw-bold mb-3" style="color: var(--navy);"><i class="fas fa-clock me-2 text-muted"></i>Entradas y Salidas del Personal</h6>
+                            <h6 class="fw-bold mb-3" style="color: var(--navy);"><i class="fas fa-clipboard-user me-2 text-muted"></i>Pase de Lista Registrado</h6>
                             
                             <div class="table-responsive">
                                 <table class="table align-middle m-0">
@@ -346,9 +345,9 @@
                                         <tr>
                                             <th>Empleado</th>
                                             <th>Fecha Jornada</th>
-                                            <th>Hora Entrada</th>
-                                            <th>Hora Salida</th>
-                                            <th class="text-end" style="width: 130px;">Estado</th>
+                                            <th>Hora Registro</th>
+                                            <th>Estado Asistencia</th>
+                                            <th>Observaciones / Justificación</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -356,23 +355,22 @@
                                             <td class="fw-bold" style="color: var(--navy);" th:text="${as.usuario != null ? as.usuario.username : 'Desconocido'}">Nombre</td>
                                             <td class="text-dark" th:text="${as.fecha != null ? #temporals.format(as.fecha, 'dd/MM/yyyy') : '---'}">01/01/2026</td>
                                             <td>
-                                                <span class="badge bg-light text-success border px-2 py-1 fw-bold" style="font-size: 0.7rem;"
-                                                      th:text="${as.horaEntrada != null ? #temporals.format(as.horaEntrada, 'HH:mm') : '--:--'}">08:00</span>
+                                                <span class="badge bg-light text-dark border px-2 py-1 fw-bold" style="font-size: 0.7rem;"
+                                                      th:text="${as.horaEntrada != null ? #temporals.format(as.horaEntrada, 'HH:mm:ss') : '--:--'}">08:00:00</span>
                                             </td>
                                             <td>
-                                                <span th:if="${as.horaSalida != null}" class="badge bg-light text-danger border px-2 py-1 fw-bold" style="font-size: 0.7rem;"
-                                                      th:text="${#temporals.format(as.horaSalida, 'HH:mm')}">17:00</span>
-                                                <span th:if="${as.horaSalida == null}" class="text-warning fw-semibold" style="font-style: italic; font-size: 0.75rem;">
-                                                    <i class="fas fa-spinner fa-spin me-1"></i>En turno...
-                                                </span>
+                                                <span th:if="${as.estado == 'ASISTENCIA'}" class="badge bg-success text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-check me-1"></i>Asistencia</span>
+                                                <span th:if="${as.estado == 'RETARDO'}" class="badge bg-warning text-dark px-2 py-1 fw-bold" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-clock me-1"></i>Retardo</span>
+                                                <span th:if="${as.estado == 'FALTA'}" class="badge bg-danger text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-times me-1"></i>Falta</span>
+                                                <span th:if="${as.estado == 'JUSTIFICADO'}" class="badge bg-info text-dark px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;"><i class="fas fa-file-alt me-1"></i>Justificado</span>
+                                                <span th:if="${as.estado == null}" class="badge bg-secondary text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;">Sin Registrar</span>
                                             </td>
-                                            <td class="text-end">
-                                                <span th:if="${as.horaSalida != null}" class="badge bg-secondary text-white px-2 py-1" style="font-size: 0.65rem; border-radius: 6px;">Concluida</span>
-                                                <span th:if="${as.horaSalida == null}" class="badge bg-warning text-dark px-2 py-1 fw-bold" style="font-size: 0.65rem; border-radius: 6px;">Laborando</span>
+                                            <td class="text-muted" style="font-size: 0.8rem;" th:text="${as.observaciones != null && !as.observaciones.isEmpty() ? as.observaciones : 'Sin observaciones'}">
+                                                Ninguna
                                             </td>
                                         </tr>
                                         <tr th:if="${#lists.isEmpty(asistencias)}">
-                                            <td colspan="5" class="text-center text-muted py-4">Ningún empleado ha registrado asistencias en la jornada actual.</td>
+                                            <td colspan="5" class="text-center text-muted py-4">Ningún registro de asistencia encontrado en la bitácora.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -384,7 +382,7 @@
         </main>
     </div>
 
-    <!-- Script de JS de Bootstrap obligatorio para hacer funcionar Tabs, Dismissible Alerts y Modales -->
+    <!-- Script de JS de Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

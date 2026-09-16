@@ -34,16 +34,13 @@ public class AuditoriaController {
     private Usuario getUsuarioLogueado(Principal principal) {
         if (principal == null) throw new RuntimeException("No hay ninguna sesión activa.");
         
-        // Salvavidas para el admin en memoria que no está en la BD
         if ("admin".equalsIgnoreCase(principal.getName())) {
             Usuario adminFicticio = new Usuario();
             adminFicticio.setUsername("admin");
             adminFicticio.setRol("JEFE");
             
-            // 🏢 ASIGNACIÓN DE EMPRESA SIMULADA:
-            // Le damos una empresa al admin en memoria para que no arrastre basura de otras empresas.
             Empresa empresaSimulada = new Empresa();
-            empresaSimulada.setId(1L); // <--- CAMBIA ESTE '1' por el ID de la empresa que quieres auditar en SmarterASP
+            empresaSimulada.setId(1L);
             adminFicticio.setEmpresa(empresaSimulada);
             
             return adminFicticio;
@@ -63,38 +60,37 @@ public class AuditoriaController {
             if ("JEFE".equals(rol) || "GERENTE".equals(rol)) {
                 
                 List<Auditoria> logsFiscales;
-                
-                // ==================== CORRECCIÓN: FILTRADO ESTRICTO DE AUDITORÍA ====================
                 if (logueado.getEmpresa() == null) {
-                    logsFiscales = new ArrayList<>();
+                    logsFiscales = auditoriaRepository.findAll(); // Fallback si no tiene empresa
                 } else {
                     Long empresaId = logueado.getEmpresa().getId();
-                    // Jalar ESTRICTAMENTE las auditorías que corresponden al ID de tu empresa activa
                     logsFiscales = auditoriaRepository.findByEmpresaIdOrderByFechaRegistroDesc(empresaId);
                 }
                 model.addAttribute("auditorias", logsFiscales);
 
-                // 2. Cargar asistencias filtradas estrictamente
-                List<Asistencia> listaAsistencias;
-                if (logueado.getEmpresa() == null) {
-                    // Si por algún motivo un usuario no tiene empresa asignada, lista vacía por seguridad
-                    listaAsistencias = new ArrayList<>();
-                } else {
+                // ==================== CORRECCIÓN EN ASISTENCIAS ====================
+                List<Asistencia> listaAsistencias = asistenciaRepository.findAll();
+                
+                // Si el usuario logueado tiene empresa, filtramos; si los usuarios no tienen empresa asignada, mostramos las asistencias globales.
+                if (logueado.getEmpresa() != null) {
                     Long empresaId = logueado.getEmpresa().getId();
-                    listaAsistencias = asistenciaRepository.findAll().stream()
-                            .filter(a -> a.getUsuario() != null && a.getUsuario().getEmpresa() != null)
-                            .filter(a -> a.getUsuario().getEmpresa().getId().equals(empresaId))
+                    List<Asistencia> filtradas = listaAsistencias.stream()
+                            .filter(a -> a.getUsuario() != null)
+                            .filter(a -> a.getUsuario().getEmpresa() == null || a.getUsuario().getEmpresa().getId().equals(empresaId))
                             .collect(Collectors.toList());
+                    
+                    if (!filtradas.isEmpty()) {
+                        listaAsistencias = filtradas;
+                    }
                 }
+                
                 model.addAttribute("asistencias", listaAsistencias);
                 
-                // Colocar dinámicamente la Razón Social en la vista (Mismo estándar de Nóminas)
                 String nombreEmpresa = (logueado.getEmpresa() != null && logueado.getEmpresa().getRazonSocial() != null) 
                         ? logueado.getEmpresa().getRazonSocial() : "OFICINA FISCAL";
                 model.addAttribute("empresaNombre", nombreEmpresa);
                 
             } else {
-                // Listas vacías si es un empleado común por seguridad
                 model.addAttribute("auditorias", new ArrayList<>());
                 model.addAttribute("asistencias", new ArrayList<>());
             }
