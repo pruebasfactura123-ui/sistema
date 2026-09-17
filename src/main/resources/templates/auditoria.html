@@ -290,12 +290,12 @@
             <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')">
                 <ul class="nav nav-tabs" id="tabAuditoria" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="fiscal-tab" data-bs-toggle="tab" data-bs-target="#fiscal" type="button" role="tab" aria-controls="fiscal" aria-selected="true">
+                        <button class="nav-link active" id="fiscal-tab" data-bs-toggle="tab" data-bs-target="#pane-fiscal" type="button" role="tab" aria-controls="pane-fiscal" aria-selected="true">
                             <i class="fas fa-shield-alt me-2 text-primary"></i>Auditoría de Movimientos
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="asistencias-tab" data-bs-toggle="tab" data-bs-target="#asistencias" type="button" role="tab" aria-controls="asistencias" aria-selected="false">
+                        <button class="nav-link" id="asistencias-tab" data-bs-toggle="tab" data-bs-target="#pane-asistencias" type="button" role="tab" aria-controls="pane-asistencias" aria-selected="false">
                             <i class="fas fa-user-clock me-2 text-success"></i>Control de Asistencias del Personal
                         </button>
                     </li>
@@ -303,7 +303,7 @@
 
                 <div class="tab-content" id="tabAuditoriaContent">
                     <!-- Tab 1: Auditoría de Movimientos -->
-                    <div class="tab-pane fade show active" id="fiscal" role="tabpanel" aria-labelledby="fiscal-tab">
+                    <div class="tab-pane fade show active" id="pane-fiscal" role="tabpanel" aria-labelledby="fiscal-tab">
                         <div class="card-custom">
                             <h6 class="fw-bold mb-3" style="color: var(--navy);"><i class="fas fa-history me-2 text-muted"></i>Rastreo de Transacciones y Cambios en el Sistema</h6>
                             
@@ -340,7 +340,7 @@
                     </div>
 
                     <!-- Tab 2: Control de Asistencias (AGRUPADO POR SEMANAS) -->
-                    <div class="tab-pane fade" id="asistencias" role="tabpanel" aria-labelledby="asistencias-tab">
+                    <div class="tab-pane fade" id="pane-asistencias" role="tabpanel" aria-labelledby="asistencias-tab">
                         
                         <div class="accordion" id="accordionAsistencias">
                             <div class="accordion-item shadow-sm" th:each="entry, iter : ${asistenciasPorSemana}">
