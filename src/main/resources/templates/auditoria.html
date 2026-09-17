@@ -289,22 +289,22 @@
 
             <!-- Management View (Jefe / Gerente) -->
             <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')">
-                <ul class="nav nav-tabs" id="tabAuditoria" role="tablist">
+                <ul class="nav nav-tabs custom-tabs-nav" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="fiscal-tab" type="button" role="tab" aria-selected="true">
+                        <button class="nav-link active custom-tab-btn" type="button" role="tab">
                             <i class="fas fa-shield-alt me-2 text-primary"></i>Auditoría de Movimientos
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="asistencias-tab" type="button" role="tab" aria-selected="false">
+                        <button class="nav-link custom-tab-btn" type="button" role="tab">
                             <i class="fas fa-user-clock me-2 text-success"></i>Control de Asistencias del Personal
                         </button>
                     </li>
                 </ul>
 
-                <div class="tab-content" id="tabAuditoriaContent">
+                <div class="tab-content custom-tabs-content">
                     <!-- Tab 1: Auditoría de Movimientos -->
-                    <div class="tab-pane fade show active" id="pane-fiscal" role="tabpanel" aria-labelledby="fiscal-tab">
+                    <div class="tab-pane-custom fade show active" style="display: block;">
                         <div class="card-custom">
                             <h6 class="fw-bold mb-3" style="color: var(--navy);"><i class="fas fa-history me-2 text-muted"></i>Rastreo de Transacciones y Cambios en el Sistema</h6>
                             
@@ -341,7 +341,7 @@
                     </div>
 
                     <!-- Tab 2: Control de Asistencias (AGRUPADO POR SEMANAS) -->
-                    <div class="tab-pane fade" id="pane-asistencias" role="tabpanel" aria-labelledby="asistencias-tab" style="display: none;">
+                    <div class="tab-pane-custom fade" style="display: none;">
                         
                         <div class="accordion" id="accordionAsistencias">
                             <div class="accordion-item shadow-sm" th:each="entry, iter : ${asistenciasPorSemana}">
@@ -414,34 +414,29 @@
         </main>
     </div>
 
-    <!-- Script de control manual para asegurar el funcionamiento de las pestañas -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Script de alternancia por índice seguro (independiente de IDs) -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const btnFiscal = document.getElementById("fiscal-tab");
-            const btnAsistencias = document.getElementById("asistencias-tab");
-            const paneFiscal = document.getElementById("pane-fiscal");
-            const paneAsistencias = document.getElementById("pane-asistencias");
+            const buttons = document.querySelectorAll(".custom-tab-btn");
+            const panes = document.querySelectorAll(".tab-pane-custom");
 
-            if (btnFiscal && btnAsistencias && paneFiscal && paneAsistencias) {
-                btnFiscal.addEventListener("click", function () {
-                    btnFiscal.classList.add("active");
-                    btnAsistencias.classList.remove("active");
-                    paneFiscal.classList.add("show", "active");
-                    paneFiscal.style.display = "block";
-                    paneAsistencias.classList.remove("show", "active");
-                    paneAsistencias.style.display = "none";
-                });
+            buttons.forEach((btn, index) => {
+                btn.addEventListener("click", function () {
+                    // Quitar activo a todos los botones y ocultar paneles
+                    buttons.forEach(b => b.classList.remove("active"));
+                    panes.forEach(p => {
+                        p.classList.remove("show", "active");
+                        p.style.display = "none";
+                    });
 
-                btnAsistencias.addEventListener("click", function () {
-                    btnAsistencias.classList.add("active");
-                    btnFiscal.classList.remove("active");
-                    paneAsistencias.classList.add("show", "active");
-                    paneAsistencias.style.display = "block";
-                    paneFiscal.classList.remove("show", "active");
-                    paneFiscal.style.display = "none";
+                    // Activar el botón presionado y mostrar su panel correspondiente
+                    btn.classList.add("active");
+                    if (panes[index]) {
+                        panes[index].classList.add("show", "active");
+                        panes[index].style.display = "block";
+                    }
                 });
-            }
+            });
         });
     </script>
 </body>
