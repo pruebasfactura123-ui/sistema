@@ -156,6 +156,7 @@
             font-size: 0.85rem; 
             transition: all 0.2s; 
             background: transparent; 
+            cursor: pointer;
         }
         .nav-tabs .nav-link:hover { color: var(--navy); }
         .nav-tabs .nav-link.active { 
@@ -290,12 +291,12 @@
             <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')">
                 <ul class="nav nav-tabs" id="tabAuditoria" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="fiscal-tab" data-bs-toggle="tab" data-bs-target="#pane-fiscal" type="button" role="tab" aria-controls="pane-fiscal" aria-selected="true">
+                        <button class="nav-link active" id="fiscal-tab" type="button" role="tab" aria-selected="true">
                             <i class="fas fa-shield-alt me-2 text-primary"></i>Auditoría de Movimientos
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="asistencias-tab" data-bs-toggle="tab" data-bs-target="#pane-asistencias" type="button" role="tab" aria-controls="pane-asistencias" aria-selected="false">
+                        <button class="nav-link" id="asistencias-tab" type="button" role="tab" aria-selected="false">
                             <i class="fas fa-user-clock me-2 text-success"></i>Control de Asistencias del Personal
                         </button>
                     </li>
@@ -340,7 +341,7 @@
                     </div>
 
                     <!-- Tab 2: Control de Asistencias (AGRUPADO POR SEMANAS) -->
-                    <div class="tab-pane fade" id="pane-asistencias" role="tabpanel" aria-labelledby="asistencias-tab">
+                    <div class="tab-pane fade" id="pane-asistencias" role="tabpanel" aria-labelledby="asistencias-tab" style="display: none;">
                         
                         <div class="accordion" id="accordionAsistencias">
                             <div class="accordion-item shadow-sm" th:each="entry, iter : ${asistenciasPorSemana}">
@@ -413,7 +414,35 @@
         </main>
     </div>
 
-    <!-- Script de JS de Bootstrap -->
+    <!-- Script de control manual para asegurar el funcionamiento de las pestañas -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const btnFiscal = document.getElementById("fiscal-tab");
+            const btnAsistencias = document.getElementById("asistencias-tab");
+            const paneFiscal = document.getElementById("pane-fiscal");
+            const paneAsistencias = document.getElementById("pane-asistencias");
+
+            if (btnFiscal && btnAsistencias && paneFiscal && paneAsistencias) {
+                btnFiscal.addEventListener("click", function () {
+                    btnFiscal.classList.add("active");
+                    btnAsistencias.classList.remove("active");
+                    paneFiscal.classList.add("show", "active");
+                    paneFiscal.style.display = "block";
+                    paneAsistencias.classList.remove("show", "active");
+                    paneAsistencias.style.display = "none";
+                });
+
+                btnAsistencias.addEventListener("click", function () {
+                    btnAsistencias.classList.add("active");
+                    btnFiscal.classList.remove("active");
+                    paneAsistencias.classList.add("show", "active");
+                    paneAsistencias.style.display = "block";
+                    paneFiscal.classList.remove("show", "active");
+                    paneFiscal.style.display = "none";
+                });
+            }
+        });
+    </script>
 </body>
 </html>
