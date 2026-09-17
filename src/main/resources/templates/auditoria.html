@@ -146,7 +146,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.02); 
         }
         
-        /* Tabs Nav */
+        /* Tabs Nav - Garantizando interacción física y clics habilitados */
         .nav-tabs { border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
         .nav-tabs .nav-link { 
             border: none; 
@@ -154,8 +154,9 @@
             font-weight: 600; 
             padding: 12px 20px; 
             font-size: 0.85rem; 
-            transition: all 0.2s; 
             background: transparent; 
+            cursor: pointer !important;
+            pointer-events: auto !important;
         }
         .nav-tabs .nav-link:hover { color: var(--navy); }
         .nav-tabs .nav-link.active { 
@@ -288,22 +289,22 @@
 
             <!-- Management View (Jefe / Gerente) -->
             <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')">
-                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <ul class="nav nav-tabs" id="auditTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="tab-fiscal" data-bs-toggle="tab" data-bs-target="#content-fiscal" type="button" role="tab" aria-controls="content-fiscal" aria-selected="true">
+                        <button class="nav-link active" id="tab-fiscal" data-bs-toggle="tab" data-bs-target="#pane-fiscal" type="button" role="tab" aria-controls="pane-fiscal" aria-selected="true">
                             <i class="fas fa-shield-alt me-2 text-primary"></i>Auditoría de Movimientos
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-asistencias" data-bs-toggle="tab" data-bs-target="#content-asistencias" type="button" role="tab" aria-controls="content-asistencias" aria-selected="false">
+                        <button class="nav-link" id="tab-asistencias" data-bs-toggle="tab" data-bs-target="#pane-asistencias" type="button" role="tab" aria-controls="pane-asistencias" aria-selected="false">
                             <i class="fas fa-user-clock me-2 text-success"></i>Control de Asistencias del Personal
                         </button>
                     </li>
                 </ul>
 
-                <div class="tab-content" id="myTabContent">
+                <div class="tab-content" id="auditTabsContent">
                     <!-- Tab 1: Auditoría de Movimientos -->
-                    <div class="tab-pane fade show active" id="content-fiscal" role="tabpanel" aria-labelledby="tab-fiscal">
+                    <div class="tab-pane fade show active" id="pane-fiscal" role="tabpanel" aria-labelledby="tab-fiscal">
                         <div class="card-custom">
                             <h6 class="fw-bold mb-3" style="color: var(--navy);"><i class="fas fa-history me-2 text-muted"></i>Rastreo de Transacciones y Cambios en el Sistema</h6>
                             
@@ -340,7 +341,7 @@
                     </div>
 
                     <!-- Tab 2: Control de Asistencias (AGRUPADO POR SEMANAS) -->
-                    <div class="tab-pane fade" id="content-asistencias" role="tabpanel" aria-labelledby="tab-asistencias">
+                    <div class="tab-pane fade" id="pane-asistencias" role="tabpanel" aria-labelledby="tab-asistencias">
                         
                         <div class="accordion" id="accordionAsistencias">
                             <div class="accordion-item shadow-sm" th:each="entry, iter : ${asistenciasPorSemana}">
@@ -413,7 +414,20 @@
         </main>
     </div>
 
-    <!-- Bootstrap 5 JS Bundle -->
+    <!-- Bootstrap 5 JS Bundle y respaldo de activación por JS nativo -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Forzar activación nativa de Bootstrap por si el bundle se inicializó antes de tiempo
+            const triggerTabList = document.querySelectorAll('#auditTabs button');
+            triggerTabList.forEach(button => {
+                button.addEventListener('click', event => {
+                    event.preventDefault();
+                    const tab = new bootstrap.Tab(button);
+                    tab.show();
+                });
+            });
+        });
+    </script>
 </body>
 </html>
