@@ -812,7 +812,7 @@ public String subir(Principal principal, @RequestParam("archivo") MultipartFile[
     System.out.println("====== FIN DEL PROCESAMIENTO, REDIRIGIENDO AL HOME ======");
     return "redirect:/";
 }
-   @GetMapping("/descargar/{identificador}")
+  @GetMapping("/descargar/{identificador}")
 @ResponseBody
 public ResponseEntity<Resource> descargar(Principal principal, @PathVariable String identificador) {
     try {
@@ -838,7 +838,8 @@ public ResponseEntity<Resource> descargar(Principal principal, @PathVariable Str
 
         // Se valida tanto que exista como que su tamaño sea mayor a 0 bytes
         if (!Files.exists(path) || Files.size(path) == 0) {
-            String xmlFalso = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<cfdi:Comprobante version=\"4.0\" mensaje=\"Simulacion local Sandbox\"/>";
+            String xmlFalso = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                              "<cfdi:Comprobante xmlns:cfdi=\"http://www.sat.gob.mx/cfd/4\" version=\"4.0\" mensaje=\"Simulacion local Sandbox\"/>";
             Files.write(path, xmlFalso.getBytes(StandardCharsets.UTF_8));
         }
 
