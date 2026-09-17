@@ -38,6 +38,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -811,45 +812,46 @@ public String subir(Principal principal, @RequestParam("archivo") MultipartFile[
     System.out.println("====== FIN DEL PROCESAMIENTO, REDIRIGIENDO AL HOME ======");
     return "redirect:/";
 }
-    @GetMapping("/descargar/{identificador}")
-    @ResponseBody
-    public ResponseEntity<Resource> descargar(Principal principal, @PathVariable String identificador) {
-        try {
-            Usuario logueado = getUsuarioLogueado(principal);
-            String rutaCarpeta = BASE_PATH + logueado.getEmpresa().getId() + "/";
+   @GetMapping("/descargar/{identificador}")
+@ResponseBody
+public ResponseEntity<Resource> descargar(Principal principal, @PathVariable String identificador) {
+    try {
+        Usuario logueado = getUsuarioLogueado(principal);
+        String rutaCarpeta = BASE_PATH + logueado.getEmpresa().getId() + "/";
 
-            String nombreArchivo = identificador.contains("-") ? "manual_" + identificador + ".xml"
-                    : "factura_" + identificador + ".xml";
+        String nombreArchivo = identificador.contains("-") ? "manual_" + identificador + ".xml"
+                : "factura_" + identificador + ".xml";
 
-            if (identificador.matches("^\\d+$")) {
-                Optional<Factura> fOpt = facturaRepository.findById(Long.parseLong(identificador));
-                if (fOpt.isPresent() && fOpt.get().getNombreArchivo() != null) {
-                    nombreArchivo = fOpt.get().getNombreArchivo();
-                }
+        if (identificador.matches("^\\d+$")) {
+            Optional<Factura> fOpt = facturaRepository.findById(Long.parseLong(identificador));
+            if (fOpt.isPresent() && fOpt.get().getNombreArchivo() != null) {
+                nombreArchivo = fOpt.get().getNombreArchivo();
             }
-
-            File carpeta = new File(rutaCarpeta);
-            if (!carpeta.exists()) {
-                carpeta.mkdirs();
-            }
-
-            Path path = Paths.get(rutaCarpeta + nombreArchivo);
-
-            if (!Files.exists(path)) {
-                String xmlFalso = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<cfdi:Comprobante version=\"4.0\" mensaje=\"Simulacion local Sandbox\"/>";
-                Files.write(path, Collections.singletonList(xmlFalso));
-            }
-
-            Resource resource = new FileSystemResource(path.toFile());
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
-                    .body(resource);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).build();
         }
-    }
 
+        File carpeta = new File(rutaCarpeta);
+        if (!carpeta.exists()) {
+            carpeta.mkdirs();
+        }
+
+        Path path = Paths.get(rutaCarpeta + nombreArchivo);
+
+        // Se valida tanto que exista como que su tamaño sea mayor a 0 bytes
+        if (!Files.exists(path) || Files.size(path) == 0) {
+            String xmlFalso = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<cfdi:Comprobante version=\"4.0\" mensaje=\"Simulacion local Sandbox\"/>";
+            Files.write(path, xmlFalso.getBytes(StandardCharsets.UTF_8));
+        }
+
+        Resource resource = new FileSystemResource(path.toFile());
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombreArchivo + "\"")
+                .body(resource);
+    } catch (Exception e) {
+        e.printStackTrace(); // Útil para ver si ocurre alguna excepción en consola
+        return ResponseEntity.status(500).build();
+    }
+}
     // =========================================================================
     // 3. GENERACIÓN DE REPORTES PDF MEJORADA (OPENPDF)
     // =========================================================================
