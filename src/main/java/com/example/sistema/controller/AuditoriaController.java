@@ -65,27 +65,34 @@ public class AuditoriaController {
                     Long empresaId = logueado.getEmpresa().getId();
                     logsFiscales = auditoriaRepository.findByEmpresaIdOrderByFechaRegistroDesc(empresaId);
                 }
-                model.addAttribute("auditorias", logsFiscales);
+                model.addAttribute("auditorias", logsFiscales != null ? logsFiscales : new ArrayList<>());
 
+                // Obtener todas las asistencias de forma segura
                 List<Asistencia> listaAsistencias = asistenciaRepository.findAll();
-                
-                if (logueado.getEmpresa() != null) {
-                    Long empresaId = logueado.getEmpresa().getId();
-                    List<Asistencia> filtradas = listaAsistencias.stream()
-                            .filter(a -> a.getUsuario() != null)
-                            .filter(a -> a.getUsuario().getEmpresa() == null || a.getUsuario().getEmpresa().getId().equals(empresaId))
-                            .collect(Collectors.toList());
-                    
-                    if (!filtradas.isEmpty()) {
-                        listaAsistencias = filtradas;
-                    }
+                if (listaAsistencias == null) {
+                    listaAsistencias = new ArrayList<>();
                 }
                 
+                // Filtrar por empresa de forma segura evitando nulos
+                if (logueado.getEmpresa() != null && logueado.getEmpresa().getId() != null) {
+                    Long empresaId = logueado.getEmpresa().getId();
+                    listaAsistencias = listaAsistencias.stream()
+                            .filter(a -> a != null && a.getUsuario() != null)
+                            .filter(a -> a.getUsuario().getEmpresa() == null || 
+                                       (a.getUsuario().getEmpresa().getId() != null && 
+                                        a.getUsuario().getEmpresa().getId().equals(empresaId)))
+                            .collect(Collectors.toList());
+                }
+                
+                // Agrupamiento seguro por semana
                 Map<String, List<Asistencia>> asistenciasPorSemana = listaAsistencias.stream()
-                        .filter(a -> a.getFecha() != null)
-                        .sorted(Comparator.comparing(Asistencia::getFecha).reversed())
+                        .filter(a -> a != null && a.getFecha() != null)
+                        .sorted(Comparator.comparing(Asistencia::getFecha, Comparator.nullsLast(Comparator.reverseOrder())))
                         .collect(Collectors.groupingBy(
-                                Asistencia::getEtiquetaSemana,
+                                a -> {
+                                    String semana = a.getEtiquetaSemana();
+                                    return (semana != null && !semana.isEmpty()) ? semana : "Semana General";
+                                },
                                 LinkedHashMap::new,
                                 Collectors.toList()
                         ));
