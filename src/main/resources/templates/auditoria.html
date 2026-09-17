@@ -146,7 +146,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.02); 
         }
         
-        /* Tabs Nav */
+        /* Tabs Nav - Forzado con cursor e interacción asegurada */
         .nav-tabs { border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; }
         .nav-tabs .nav-link { 
             border: none; 
@@ -154,15 +154,16 @@
             font-weight: 600; 
             padding: 12px 20px; 
             font-size: 0.85rem; 
-            transition: all 0.2s; 
             background: transparent; 
-            cursor: pointer;
+            cursor: pointer !important;
+            position: relative;
+            z-index: 10;
         }
         .nav-tabs .nav-link:hover { color: var(--navy); }
-        .nav-tabs .nav-link.active { 
-            color: var(--navy); 
-            border-bottom: 3px solid var(--accent); 
-            font-weight: 700; 
+        .nav-tabs .nav-link.active-forced { 
+            color: var(--navy) !important; 
+            border-bottom: 3px solid var(--accent) !important; 
+            font-weight: 700 !important; 
         }
 
         /* Tables */
@@ -289,22 +290,22 @@
 
             <!-- Management View (Jefe / Gerente) -->
             <div sec:authorize="hasAnyRole('JEFE', 'GERENTE')">
-                <ul class="nav nav-tabs custom-tabs-nav" role="tablist">
+                <ul class="nav nav-tabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active custom-tab-btn" type="button" role="tab">
+                        <button class="nav-link active-forced manual-tab-btn" type="button">
                             <i class="fas fa-shield-alt me-2 text-primary"></i>Auditoría de Movimientos
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link custom-tab-btn" type="button" role="tab">
+                        <button class="nav-link manual-tab-btn" type="button">
                             <i class="fas fa-user-clock me-2 text-success"></i>Control de Asistencias del Personal
                         </button>
                     </li>
                 </ul>
 
-                <div class="tab-content custom-tabs-content">
+                <div class="tab-content">
                     <!-- Tab 1: Auditoría de Movimientos -->
-                    <div class="tab-pane-custom fade show active" style="display: block;">
+                    <div class="manual-tab-pane" id="pane-movimientos" style="display: block;">
                         <div class="card-custom">
                             <h6 class="fw-bold mb-3" style="color: var(--navy);"><i class="fas fa-history me-2 text-muted"></i>Rastreo de Transacciones y Cambios en el Sistema</h6>
                             
@@ -341,7 +342,7 @@
                     </div>
 
                     <!-- Tab 2: Control de Asistencias (AGRUPADO POR SEMANAS) -->
-                    <div class="tab-pane-custom fade" style="display: none;">
+                    <div class="manual-tab-pane" id="pane-asistencias-personal" style="display: none;">
                         
                         <div class="accordion" id="accordionAsistencias">
                             <div class="accordion-item shadow-sm" th:each="entry, iter : ${asistenciasPorSemana}">
@@ -414,25 +415,24 @@
         </main>
     </div>
 
-    <!-- Script de alternancia por índice seguro (independiente de IDs) -->
+    <!-- Script de control directo puro anti-bloqueo -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const buttons = document.querySelectorAll(".custom-tab-btn");
-            const panes = document.querySelectorAll(".tab-pane-custom");
+            const tabs = document.querySelectorAll(".manual-tab-btn");
+            const panes = document.querySelectorAll(".manual-tab-pane");
 
-            buttons.forEach((btn, index) => {
-                btn.addEventListener("click", function () {
-                    // Quitar activo a todos los botones y ocultar paneles
-                    buttons.forEach(b => b.classList.remove("active"));
-                    panes.forEach(p => {
-                        p.classList.remove("show", "active");
-                        p.style.display = "none";
-                    });
+            tabs.forEach((tab, index) => {
+                tab.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    
+                    // Remover estilo activo de todos los botones
+                    tabs.forEach(t => t.classList.remove("active-forced"));
+                    // Ocultar todos los paneles
+                    panes.forEach(p => p.style.display = "none");
 
-                    // Activar el botón presionado y mostrar su panel correspondiente
-                    btn.classList.add("active");
+                    // Activar el seleccionado
+                    tab.classList.add("active-forced");
                     if (panes[index]) {
-                        panes[index].classList.add("show", "active");
                         panes[index].style.display = "block";
                     }
                 });
